@@ -1,0 +1,953 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
+    <title>Наставник Сочи — волонтёрство в образовании</title>
+    <!-- Leaflet (карта) -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- Шрифты и иконки -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        /* все стили остаются без изменений (см. предыдущий ответ) */
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
+            background: #f0f7fa;
+            color: #1e2f4e;
+            line-height: 1.5;
+        }
+        .app-header {
+            background: linear-gradient(135deg, #0b2b44, #1b4a6b);
+            color: white;
+            padding: 1rem 2rem;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 4px 12px rgba(0,20,40,0.3);
+        }
+        .logo h1 {
+            font-size: 1.8rem;
+            font-weight: 500;
+            letter-spacing: 1px;
+        }
+        .logo span {
+            font-size: 1rem;
+            opacity: 0.9;
+            display: block;
+        }
+        .nav {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 1rem;
+        }
+        .nav a, .nav button {
+            color: white;
+            margin-left: 0.5rem;
+            text-decoration: none;
+            font-weight: 500;
+            padding: 0.5rem 0;
+            border-bottom: 2px solid transparent;
+            transition: 0.2s;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 1rem;
+        }
+        .nav a:hover, .nav a.active, .nav button:hover {
+            border-bottom-color: #ffb347;
+        }
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+        }
+        .avatar-small {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid #ffb347;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 1.5rem;
+        }
+        .card {
+            background: white;
+            border-radius: 24px;
+            padding: 1.8rem;
+            box-shadow: 0 8px 24px rgba(0,32,64,0.1);
+            margin-bottom: 2rem;
+            backdrop-filter: blur(2px);
+        }
+        .flex-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 2rem;
+        }
+        .filters-panel {
+            flex: 1 1 280px;
+            background: #ffffffd9;
+            border-radius: 24px;
+            padding: 1.5rem;
+            height: fit-content;
+            backdrop-filter: blur(4px);
+            box-shadow: 0 4px 16px rgba(0,0,0,0.05);
+        }
+        .requests-panel {
+            flex: 3 1 500px;
+        }
+        .filter-group {
+            margin-bottom: 1.8rem;
+        }
+        .filter-group h3 {
+            font-size: 1.2rem;
+            margin-bottom: 0.8rem;
+            color: #0f3b5e;
+            border-left: 4px solid #ffb347;
+            padding-left: 0.8rem;
+        }
+        .filter-group label {
+            display: block;
+            margin: 0.5rem 0;
+            font-size: 0.98rem;
+        }
+        .filter-group input, .filter-group select {
+            width: 100%;
+            padding: 0.7rem 1rem;
+            border: 1px solid #cbd5e1;
+            border-radius: 40px;
+            font-size: 1rem;
+            margin-top: 0.3rem;
+        }
+        .checkbox-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(130px,1fr));
+            gap: 0.3rem;
+        }
+        .btn {
+            background: #1e4a6d;
+            color: white;
+            border: none;
+            padding: 0.8rem 2rem;
+            border-radius: 40px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.2s;
+            box-shadow: 0 4px 8px rgba(0,40,70,0.2);
+        }
+        .btn-outline {
+            background: white;
+            color: #1e4a6d;
+            border: 2px solid #1e4a6d;
+        }
+        .btn:hover {
+            background: #0f3752;
+            transform: translateY(-2px);
+        }
+        .request-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px,1fr));
+            gap: 1.5rem;
+        }
+        .request-card {
+            background: white;
+            border-radius: 20px;
+            padding: 1.2rem;
+            box-shadow: 0 6px 14px rgba(0, 0, 0, 0.04);
+            transition: 0.2s;
+            border: 1px solid #e2f0f9;
+            cursor: pointer;
+            display: flex;
+            gap: 1rem;
+        }
+        .request-card:hover {
+            transform: scale(1.02);
+            border-color: #ffb347;
+        }
+        .avatar-medium {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid #1e4a6d;
+        }
+        .request-content {
+            flex: 1;
+        }
+        .request-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin-bottom: 0.3rem;
+            color: #0b2b44;
+        }
+        .request-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem 0.5rem;
+            font-size: 0.9rem;
+            color: #2c5777;
+            margin: 0.5rem 0;
+        }
+        .badge {
+            background: #e1f0fa;
+            padding: 0.3rem 1rem;
+            border-radius: 40px;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+        .contact-chip {
+            background: #f5f9ff;
+            border: 1px dashed #1e4a6d;
+            border-radius: 40px;
+            padding: 0.4rem 1rem;
+            display: inline-block;
+            margin-top: 0.5rem;
+            font-size: 0.9rem;
+        }
+        #map {
+            height: 350px;
+            width: 100%;
+            border-radius: 24px;
+            margin-top: 1.5rem;
+            z-index: 1;
+        }
+        .form-group {
+            margin-bottom: 1.4rem;
+        }
+        .form-group label {
+            font-weight: 600;
+            display: block;
+            margin-bottom: 0.3rem;
+        }
+        .form-control {
+            width: 100%;
+            padding: 0.8rem 1.2rem;
+            border: 1px solid #bcd3e6;
+            border-radius: 40px;
+            font-size: 1rem;
+        }
+        textarea.form-control {
+            border-radius: 24px;
+            resize: vertical;
+        }
+        .radio-group {
+            display: flex;
+            gap: 1.5rem;
+            flex-wrap: wrap;
+        }
+        .radio-group label {
+            font-weight: normal;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+        .district-selector {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+        .footer {
+            text-align: center;
+            padding: 2rem;
+            color: #4b6a88;
+        }
+        .hidden {
+            display: none;
+        }
+        .toast {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            background: #1e4a6d;
+            color: white;
+            padding: 1rem 2rem;
+            border-radius: 60px;
+            box-shadow: 0 8px 20px black;
+            z-index: 999;
+        }
+        .profile-header {
+            display: flex;
+            gap: 2rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .avatar-large {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 4px solid #ffb347;
+        }
+        .avatar-upload {
+            margin-top: 1rem;
+        }
+        @media (max-width: 700px) {
+            .app-header {
+                flex-direction: column;
+                text-align: center;
+            }
+            .nav {
+                justify-content: center;
+            }
+            .profile-header {
+                justify-content: center;
+                text-align: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header class="app-header">
+        <div class="logo">
+            <h1>🌱 Наставник Сочи</h1>
+            <span>волонтёрская помощь учителям</span>
+        </div>
+        <div class="nav" id="mainNav">
+            <!-- будет заполняться динамически -->
+        </div>
+    </header>
+
+    <div id="pageContent" class="container">
+        <!-- динамически подгружается JS -->
+    </div>
+
+    <div class="footer">
+        <p>🌊 Проект «Первые шаги в цифровое будущее» — Сочи 2026</p>
+    </div>
+
+    <div id="toastMessage" class="toast hidden"></div>
+
+    <script>
+        // ---------- КОНФИГУРАЦИЯ (ВАШИ ДАННЫЕ) ----------
+        const CONFIG = {
+            // ВАЖНО: замените 'ВАШ_ЛОГИН' на свой GitHub логин
+            GIST_RAW_URL: 'https://gist.githubusercontent.com/ВАШ_ЛОГИН/7e660241ea87b34a2d3e69f40a24ca33/raw/data.txt',
+            // URL вашей serverless функции на Vercel (настройте позже)
+            GIST_API_URL: 'https://ваш-проект.vercel.app/api/update-gist',
+            ENCRYPTION_PASSWORD: 'sochi-volunteer-2026-secret'
+        };
+
+        // ---------- ШИФРОВАНИЕ (AES-256-GCM) ----------
+        async function getKeyFromPassword(password) {
+            const enc = new TextEncoder();
+            const keyMaterial = await crypto.subtle.importKey(
+                'raw', enc.encode(password), { name: 'PBKDF2' }, false, ['deriveKey']
+            );
+            return crypto.subtle.deriveKey(
+                {
+                    name: 'PBKDF2',
+                    salt: enc.encode('sochi-salt-2026'),
+                    iterations: 100000,
+                    hash: 'SHA-256'
+                },
+                keyMaterial,
+                { name: 'AES-GCM', length: 256 },
+                false,
+                ['encrypt', 'decrypt']
+            );
+        }
+
+        async function encryptData(data, password) {
+            const key = await getKeyFromPassword(password);
+            const iv = crypto.getRandomValues(new Uint8Array(12));
+            const enc = new TextEncoder();
+            const encoded = enc.encode(JSON.stringify(data));
+            const ciphertext = await crypto.subtle.encrypt(
+                { name: 'AES-GCM', iv: iv },
+                key,
+                encoded
+            );
+            const combined = new Uint8Array(iv.length + new Uint8Array(ciphertext).length);
+            combined.set(iv, 0);
+            combined.set(new Uint8Array(ciphertext), iv.length);
+            return btoa(String.fromCharCode(...combined));
+        }
+
+        async function decryptData(encryptedBase64, password) {
+            const key = await getKeyFromPassword(password);
+            const combined = Uint8Array.from(atob(encryptedBase64), c => c.charCodeAt(0));
+            const iv = combined.slice(0, 12);
+            const ciphertext = combined.slice(12);
+            const decrypted = await crypto.subtle.decrypt(
+                { name: 'AES-GCM', iv: iv },
+                key,
+                ciphertext
+            );
+            const dec = new TextDecoder();
+            return JSON.parse(dec.decode(decrypted));
+        }
+
+        // ---------- ЗАГРУЗКА И СОХРАНЕНИЕ ДАННЫХ ----------
+        async function loadDB() {
+            try {
+                const response = await fetch(CONFIG.GIST_RAW_URL);
+                if (!response.ok) throw new Error('Не удалось загрузить данные');
+                const encrypted = await response.text();
+                if (!encrypted) return { users: [], requests: [] };
+                return await decryptData(encrypted.trim(), CONFIG.ENCRYPTION_PASSWORD);
+            } catch (e) {
+                console.warn('Ошибка загрузки, возвращаю пустую БД', e);
+                return { users: [], requests: [] };
+            }
+        }
+
+        async function saveDB(db) {
+            const encrypted = await encryptData(db, CONFIG.ENCRYPTION_PASSWORD);
+            const response = await fetch(CONFIG.GIST_API_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ encryptedData: encrypted })
+            });
+            if (!response.ok) throw new Error('Ошибка записи в Gist');
+            return true;
+        }
+
+        // ---------- УПРАВЛЕНИЕ ПОЛЬЗОВАТЕЛЕМ ----------
+        let currentUser = null;
+
+        function setCurrentUser(user) {
+            currentUser = user;
+            if (user) {
+                localStorage.setItem('currentUserId', user.id);
+            } else {
+                localStorage.removeItem('currentUserId');
+            }
+            updateNav();
+        }
+
+        async function loadCurrentUser() {
+            const userId = localStorage.getItem('currentUserId');
+            if (!userId) return null;
+            const db = await loadDB();
+            const user = db.users.find(u => u.id === userId);
+            if (user) {
+                currentUser = user;
+            } else {
+                localStorage.removeItem('currentUserId');
+            }
+            updateNav();
+            return currentUser;
+        }
+
+        // ---------- НАВИГАЦИЯ ----------
+        function updateNav() {
+            const nav = document.getElementById('mainNav');
+            if (currentUser) {
+                nav.innerHTML = `
+                    <a href="#" data-page="home">Главная</a>
+                    ${currentUser.role === 'teacher' ? '<a href="#" data-page="create">➕ Создать заявку</a>' : ''}
+                    <a href="#" data-page="profile">👤 ${currentUser.name}</a>
+                    <button data-page="logout">Выйти</button>
+                `;
+            } else {
+                nav.innerHTML = `
+                    <a href="#" data-page="home">Главная</a>
+                    <a href="#" data-page="login">Вход / Регистрация</a>
+                    <a href="#" data-page="about">О проекте</a>
+                `;
+            }
+            // перепривязываем обработчики
+            document.querySelectorAll('.nav a, .nav button').forEach(el => {
+                el.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const page = el.dataset.page;
+                    if (page === 'logout') {
+                        setCurrentUser(null);
+                        navigate('home');
+                    } else {
+                        navigate(page);
+                    }
+                });
+            });
+        }
+
+        // ---------- ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ ----------
+        let map = null;
+        let markersLayer = null;
+        let currentRequests = [];
+        let currentUsers = [];
+        const districts = ['Центральный', 'Адлерский', 'Хостинский', 'Лазаревский'];
+        const helpTypes = [
+            { value: 'substitute', label: 'Замещение учителя' },
+            { value: 'assist', label: 'Помощь учителю (дисциплина, помощь детям)' },
+            { value: 'event', label: 'Помощь в мероприятии' }
+        ];
+        const rewards = ['Еда', 'Ничего', 'Другое'];
+
+        // ---------- ФИЛЬТРЫ ----------
+        let filters = { search: '', district: '', dateFrom: '', dateTo: '', reward: [], helpType: [] };
+
+        // ---------- ОТРИСОВКА ГЛАВНОЙ ----------
+        async function renderHome() {
+            const db = await loadDB();
+            currentRequests = db.requests || [];
+            currentUsers = db.users || [];
+            const container = document.getElementById('pageContent');
+            container.innerHTML = `
+                <div class="flex-row">
+                    <div class="filters-panel">
+                        <h2 style="margin-bottom:1rem; color:#0b2b44;">🔍 Фильтры</h2>
+                        <div class="filter-group">
+                            <label>🔎 Поиск по названию/описанию</label>
+                            <input type="text" id="filterSearch" placeholder="Введите слово..." value="${filters.search}">
+                        </div>
+                        <div class="filter-group">
+                            <label>📍 Район</label>
+                            <select id="filterDistrict">
+                                <option value="">Все районы</option>
+                                ${districts.map(d => `<option value="${d}" ${filters.district===d?'selected':''}>${d}</option>`).join('')}
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label>📅 Дата с</label>
+                            <input type="date" id="filterDateFrom" value="${filters.dateFrom}">
+                            <label>📅 по</label>
+                            <input type="date" id="filterDateTo" value="${filters.dateTo}">
+                        </div>
+                        <div class="filter-group">
+                            <h3>🍎 Поощрение</h3>
+                            <div class="checkbox-grid">
+                                ${rewards.map(r => `
+                                    <label><input type="checkbox" value="${r}" class="filterReward" ${filters.reward.includes(r)?'checked':''}> ${r}</label>
+                                `).join('')}
+                            </div>
+                        </div>
+                        <div class="filter-group">
+                            <h3>👥 Вид помощи</h3>
+                            <div class="checkbox-grid">
+                                ${helpTypes.map(t => `
+                                    <label><input type="checkbox" value="${t.value}" class="filterHelpType" ${filters.helpType.includes(t.value)?'checked':''}> ${t.label}</label>
+                                `).join('')}
+                            </div>
+                        </div>
+                        <button class="btn" id="applyFiltersBtn">Применить фильтры</button>
+                        <button class="btn-outline btn" id="resetFiltersBtn" style="margin-left:0.5rem;">Сброс</button>
+                    </div>
+                    <div class="requests-panel">
+                        <h2>📋 Текущие заявки (<span id="requestsCount">${currentRequests.length}</span>)</h2>
+                        <div id="map"></div>
+                        <div id="requestsList" class="request-grid" style="margin-top:2rem;"></div>
+                    </div>
+                </div>
+            `;
+
+            initMap();
+            attachFilterEvents();
+            applyFiltersToRequests();
+        }
+
+        function initMap() {
+            if (!map) {
+                map = L.map('map').setView([43.6, 39.73], 11);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '© OpenStreetMap'
+                }).addTo(map);
+                markersLayer = L.layerGroup().addTo(map);
+            } else {
+                map.invalidateSize();
+            }
+        }
+
+        function attachFilterEvents() {
+            document.getElementById('applyFiltersBtn').addEventListener('click', applyFiltersToRequests);
+            document.getElementById('resetFiltersBtn').addEventListener('click', resetFilters);
+            document.querySelectorAll('.filterReward').forEach(cb => cb.addEventListener('change', updateFiltersFromInputs));
+            document.querySelectorAll('.filterHelpType').forEach(cb => cb.addEventListener('change', updateFiltersFromInputs));
+            document.getElementById('filterSearch').addEventListener('input', updateFiltersFromInputs);
+            document.getElementById('filterDistrict').addEventListener('change', updateFiltersFromInputs);
+            document.getElementById('filterDateFrom').addEventListener('change', updateFiltersFromInputs);
+            document.getElementById('filterDateTo').addEventListener('change', updateFiltersFromInputs);
+        }
+
+        function updateFiltersFromInputs() {
+            filters.search = document.getElementById('filterSearch').value;
+            filters.district = document.getElementById('filterDistrict').value;
+            filters.dateFrom = document.getElementById('filterDateFrom').value;
+            filters.dateTo = document.getElementById('filterDateTo').value;
+            filters.reward = Array.from(document.querySelectorAll('.filterReward:checked')).map(cb => cb.value);
+            filters.helpType = Array.from(document.querySelectorAll('.filterHelpType:checked')).map(cb => cb.value);
+        }
+
+        function applyFiltersToRequests() {
+            updateFiltersFromInputs();
+            const filtered = currentRequests.filter(req => {
+                if (filters.search && !req.title.toLowerCase().includes(filters.search.toLowerCase()) && !req.description.toLowerCase().includes(filters.search.toLowerCase())) return false;
+                if (filters.district && req.district !== filters.district) return false;
+                if (filters.dateFrom && req.dateTime < filters.dateFrom) return false;
+                if (filters.dateTo && req.dateTime > filters.dateTo) return false;
+                if (filters.reward.length > 0 && !filters.reward.includes(req.reward)) return false;
+                if (filters.helpType.length > 0 && !filters.helpType.includes(req.helpType)) return false;
+                return true;
+            });
+            renderRequestsList(filtered);
+            updateMapMarkers(filtered);
+            document.getElementById('requestsCount').innerText = filtered.length;
+        }
+
+        function resetFilters() {
+            filters = { search: '', district: '', dateFrom: '', dateTo: '', reward: [], helpType: [] };
+            renderHome();
+        }
+
+        function renderRequestsList(requests) {
+            const listDiv = document.getElementById('requestsList');
+            if (requests.length === 0) {
+                listDiv.innerHTML = '<p style="grid-column:1/-1; text-align:center;">😕 Нет заявок по выбранным фильтрам</p>';
+                return;
+            }
+            listDiv.innerHTML = requests.map(req => {
+                const teacher = currentUsers.find(u => u.id === req.userId) || { name: req.teacherName, avatar: null, contact: req.teacherContact };
+                return `
+                <div class="request-card" data-id="${req.id}">
+                    <img src="${teacher.avatar || 'https://via.placeholder.com/60?text=+'}" class="avatar-medium" alt="avatar">
+                    <div class="request-content">
+                        <div class="request-title">${req.title}</div>
+                        <div class="request-meta">
+                            <span class="badge">${req.district}</span>
+                            <span class="badge">${new Date(req.dateTime).toLocaleDateString('ru-RU')}</span>
+                            <span class="badge">${helpTypes.find(t => t.value === req.helpType)?.label || req.helpType}</span>
+                            <span class="badge">🎁 ${req.reward}</span>
+                        </div>
+                        <p>${req.description.substring(0,80)}…</p>
+                        <div class="contact-chip">
+                            👤 ${teacher.name} · ☎️ ${teacher.contact}
+                        </div>
+                    </div>
+                </div>
+            `}).join('');
+            document.querySelectorAll('.request-card').forEach(card => {
+                card.addEventListener('click', () => {
+                    const id = card.dataset.id;
+                    const req = requests.find(r => r.id == id);
+                    const teacher = currentUsers.find(u => u.id === req.userId) || { name: req.teacherName, contact: req.teacherContact, bio: '' };
+                    alert(`👩‍🏫 Учитель: ${teacher.name}\n📞 Контакт: ${teacher.contact}\n📝 О себе: ${teacher.bio || 'не указано'}\n\n📍 ${req.address}\n\n${req.description}`);
+                });
+            });
+        }
+
+        function updateMapMarkers(requests) {
+            markersLayer.clearLayers();
+            requests.forEach(req => {
+                if (req.lat && req.lng) {
+                    const teacher = currentUsers.find(u => u.id === req.userId) || { name: req.teacherName };
+                    const marker = L.marker([req.lat, req.lng]).bindPopup(`
+                        <b>${req.title}</b><br>${req.address}<br>👤 ${teacher.name}<br>📞 ${req.teacherContact}
+                    `);
+                    markersLayer.addLayer(marker);
+                }
+            });
+        }
+
+        // ---------- СТРАНИЦА СОЗДАНИЯ ЗАЯВКИ ----------
+        async function renderCreate() {
+            if (!currentUser || currentUser.role !== 'teacher') {
+                showToast('Только учителя могут создавать заявки');
+                return navigate('home');
+            }
+            const container = document.getElementById('pageContent');
+            container.innerHTML = `
+                <div class="card" style="max-width:800px; margin:0 auto;">
+                    <h2>📝 Новая заявка для волонтёров</h2>
+                    <form id="createRequestForm">
+                        <div class="form-group">
+                            <label>Название*</label>
+                            <input class="form-control" id="title" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Описание*</label>
+                            <textarea class="form-control" id="description" rows="3" required></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label>Адрес учреждения (с районом)*</label>
+                            <div class="district-selector">
+                                <input class="form-control" id="address" placeholder="например, ул. Юных ленинцев, 5" required style="flex:2;">
+                                <select id="district" class="form-control" required style="flex:1;">
+                                    <option value="">Район</option>
+                                    ${districts.map(d => `<option value="${d}">${d}</option>`).join('')}
+                                </select>
+                            </div>
+                            <small>📍 Укажите адрес, затем нажмите "Найти на карте"</small>
+                            <button type="button" class="btn-outline btn" id="geocodeBtn" style="margin-top:0.5rem;">Найти на карте</button>
+                            <div id="mapPick" style="height:250px; margin-top:1rem; border-radius:20px;"></div>
+                            <input type="hidden" id="lat" value="">
+                            <input type="hidden" id="lng" value="">
+                        </div>
+                        <div class="form-group">
+                            <label>Дата и время мероприятия*</label>
+                            <input type="datetime-local" class="form-control" id="dateTime" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Поощрение волонтёру</label>
+                            <select id="reward" class="form-control">
+                                ${rewards.map(r => `<option value="${r}">${r}</option>`).join('')}
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Вид помощи*</label>
+                            <div class="radio-group">
+                                ${helpTypes.map(t => `
+                                    <label><input type="radio" name="helpType" value="${t.value}" required> ${t.label}</label>
+                                `).join('')}
+                            </div>
+                        </div>
+                        <button type="submit" class="btn">📨 Опубликовать заявку</button>
+                    </form>
+                </div>
+            `;
+
+            // карта для выбора местоположения
+            const mapPick = L.map('mapPick').setView([43.6, 39.73], 13);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(mapPick);
+            let marker = null;
+            mapPick.on('click', (e) => {
+                if (marker) mapPick.removeLayer(marker);
+                marker = L.marker(e.latlng).addTo(mapPick);
+                document.getElementById('lat').value = e.latlng.lat;
+                document.getElementById('lng').value = e.latlng.lng;
+                fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${e.latlng.lat}&lon=${e.latlng.lng}&accept-language=ru`)
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.display_name) document.getElementById('address').value = data.display_name;
+                    });
+            });
+
+            document.getElementById('geocodeBtn').addEventListener('click', () => {
+                const addr = document.getElementById('address').value;
+                if (!addr) return;
+                fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(addr + ', Сочи')}&limit=1`)
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.length) {
+                            const lat = parseFloat(data[0].lat);
+                            const lon = parseFloat(data[0].lon);
+                            mapPick.setView([lat, lon], 16);
+                            if (marker) mapPick.removeLayer(marker);
+                            marker = L.marker([lat, lon]).addTo(mapPick);
+                            document.getElementById('lat').value = lat;
+                            document.getElementById('lng').value = lon;
+                        } else alert('Адрес не найден');
+                    });
+            });
+
+            document.getElementById('createRequestForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const newReq = {
+                    id: Date.now() + '-' + Math.random().toString(36).substr(2, 6),
+                    userId: currentUser.id,
+                    title: document.getElementById('title').value,
+                    description: document.getElementById('description').value,
+                    teacherName: currentUser.name,
+                    teacherContact: currentUser.contact,
+                    address: document.getElementById('address').value,
+                    district: document.getElementById('district').value,
+                    lat: parseFloat(document.getElementById('lat').value) || null,
+                    lng: parseFloat(document.getElementById('lng').value) || null,
+                    dateTime: document.getElementById('dateTime').value,
+                    reward: document.getElementById('reward').value,
+                    helpType: document.querySelector('input[name="helpType"]:checked')?.value,
+                    createdAt: new Date().toISOString()
+                };
+                if (!newReq.helpType) { alert('Выберите вид помощи'); return; }
+                if (!newReq.lat || !newReq.lng) { alert('Укажите местоположение на карте'); return; }
+
+                const db = await loadDB();
+                db.requests.push(newReq);
+                await saveDB(db);
+                showToast('✅ Заявка создана!');
+                navigate('home');
+            });
+        }
+
+        // ---------- ПРОФИЛЬ ----------
+        async function renderProfile() {
+            if (!currentUser) { navigate('login'); return; }
+            const container = document.getElementById('pageContent');
+            container.innerHTML = `
+                <div class="card" style="max-width:600px; margin:0 auto;">
+                    <h2>👤 Личный кабинет</h2>
+                    <div class="profile-header">
+                        <img src="${currentUser.avatar || 'https://via.placeholder.com/120?text=Фото'}" class="avatar-large" id="profileAvatar">
+                        <div style="flex:1;">
+                            <p><strong>Имя:</strong> ${currentUser.name}</p>
+                            <p><strong>Роль:</strong> ${currentUser.role === 'teacher' ? 'Учитель' : 'Ученик'}</p>
+                            <p><strong>Контакт:</strong> ${currentUser.contact || 'не указан'}</p>
+                            <p><strong>О себе:</strong> ${currentUser.bio || 'не заполнено'}</p>
+                        </div>
+                    </div>
+                    <hr>
+                    <h3>Редактировать профиль</h3>
+                    <form id="profileForm">
+                        <div class="form-group">
+                            <label>Имя</label>
+                            <input class="form-control" id="editName" value="${currentUser.name}" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Контакт (телефон/email)</label>
+                            <input class="form-control" id="editContact" value="${currentUser.contact || ''}">
+                        </div>
+                        <div class="form-group">
+                            <label>О себе</label>
+                            <textarea class="form-control" id="editBio" rows="3">${currentUser.bio || ''}</textarea>
+                        </div>
+                        <div class="form-group avatar-upload">
+                            <label>Аватар (нажмите для выбора файла)</label>
+                            <input type="file" id="avatarInput" accept="image/*">
+                            <small>Изображение будет сжато до 64x64</small>
+                        </div>
+                        <button type="submit" class="btn">Сохранить изменения</button>
+                    </form>
+                </div>
+            `;
+
+            document.getElementById('avatarInput').addEventListener('change', handleAvatarUpload);
+            document.getElementById('profileForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const updated = { ...currentUser,
+                    name: document.getElementById('editName').value,
+                    contact: document.getElementById('editContact').value,
+                    bio: document.getElementById('editBio').value,
+                };
+                const db = await loadDB();
+                const index = db.users.findIndex(u => u.id === currentUser.id);
+                if (index !== -1) db.users[index] = updated;
+                await saveDB(db);
+                setCurrentUser(updated);
+                showToast('Профиль обновлён');
+                renderProfile();
+            });
+        }
+
+        async function handleAvatarUpload(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const img = new Image();
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                img.src = event.target.result;
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    const size = 64;
+                    canvas.width = size;
+                    canvas.height = size;
+                    ctx.drawImage(img, 0, 0, size, size);
+                    const base64 = canvas.toDataURL('image/jpeg', 0.7);
+                    document.getElementById('profileAvatar').src = base64;
+                    currentUser.avatar = base64;
+                };
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // ---------- ВХОД / РЕГИСТРАЦИЯ ----------
+        async function renderLogin() {
+            const container = document.getElementById('pageContent');
+            container.innerHTML = `
+                <div class="card" style="max-width:400px; margin:0 auto;">
+                    <h2>🔐 Вход / Регистрация</h2>
+                    <form id="loginForm">
+                        <div class="form-group">
+                            <label>Ваше имя</label>
+                            <input class="form-control" id="loginName" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Вы</label>
+                            <select class="form-control" id="loginRole">
+                                <option value="teacher">Учитель</option>
+                                <option value="student">Ученик</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Контакт (телефон/email)</label>
+                            <input class="form-control" id="loginContact">
+                        </div>
+                        <p style="font-size:0.9rem;">Если имя уже существует, вы войдёте в существующую учётную запись (без пароля).</p>
+                        <button type="submit" class="btn">Войти / Зарегистрироваться</button>
+                    </form>
+                </div>
+            `;
+            document.getElementById('loginForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const name = document.getElementById('loginName').value.trim();
+                const role = document.getElementById('loginRole').value;
+                const contact = document.getElementById('loginContact').value;
+                const db = await loadDB();
+                let user = db.users.find(u => u.name === name && u.role === role);
+                if (!user) {
+                    user = {
+                        id: 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6),
+                        name,
+                        role,
+                        contact,
+                        bio: '',
+                        avatar: null
+                    };
+                    db.users.push(user);
+                    await saveDB(db);
+                }
+                setCurrentUser(user);
+                navigate('home');
+            });
+        }
+
+        // ---------- О ПРОЕКТЕ ----------
+        function renderAbout() {
+            document.getElementById('pageContent').innerHTML = `
+                <div class="card">
+                    <h2>🌿 О проекте «Будь наставником!»</h2>
+                    <p style="font-size:1.2rem;">Волонтёрская помощь учителям дополнительного образования в Сочи</p>
+                    <hr style="margin:1rem 0;">
+                    <h3>📋 Задачи, которые мы реализовали:</h3>
+                    <ul style="margin-left:2rem;">
+                        <li>✅ Опрос учителей и учеников (выяснили потребности: помощь в мероприятиях, дисциплине, замещении)</li>
+                        <li>✅ Созданы информационные листовки и посты для соцсетей</li>
+                        <li>✅ Проведено мотивационное событие в школе (вдохновили 30+ старшеклассников)</li>
+                        <li>✅ Сообщество в Telegram для быстрого сбора заявок</li>
+                        <li>✅ <strong>Данный сайт</strong> — система обмена заявками с личными кабинетами и аватарами</li>
+                        <li>✅ Разработаны правила этикета помощника</li>
+                        <li>✅ Проведены 2 пробных мероприятия: олимпиада по информатике и открытый урок</li>
+                    </ul>
+                    <p>🔐 Все данные хранятся в зашифрованном виде (AES-256) в GitHub Gist. Карта OpenStreetMap.</p>
+                    <p>⭐ Присоединяйтесь к волонтёрскому движению Сочи!</p>
+                </div>
+            `;
+        }
+
+        // ---------- НАВИГАЦИЯ ----------
+        async function navigate(page) {
+            document.querySelectorAll('.nav a, .nav button').forEach(el => el.classList.remove('active'));
+            const activeEl = Array.from(document.querySelectorAll('.nav a, .nav button')).find(el => el.dataset.page === page);
+            if (activeEl) activeEl.classList.add('active');
+
+            if (page === 'home') await renderHome();
+            else if (page === 'create') await renderCreate();
+            else if (page === 'profile') await renderProfile();
+            else if (page === 'login') await renderLogin();
+            else if (page === 'about') renderAbout();
+        }
+
+        // ---------- TOAST ----------
+        function showToast(text) {
+            const toast = document.getElementById('toastMessage');
+            toast.innerText = text;
+            toast.classList.remove('hidden');
+            setTimeout(() => toast.classList.add('hidden'), 3000);
+        }
+
+        // ---------- ИНИЦИАЛИЗАЦИЯ ----------
+        window.addEventListener('load', async () => {
+            await loadCurrentUser();
+            updateNav();
+            const initialPage = window.location.hash.replace('#', '') || 'home';
+            navigate(initialPage);
+        });
+    </script>
+</body>
+</html>
