@@ -1,1 +1,78 @@
-# Страница для ошибки
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>404 — Страница не найдена</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
+            background: linear-gradient(135deg, #e6f0fa 0%, #cfe3f5 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 2rem;
+        }
+        .error-container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 48px;
+            padding: 3rem 2rem;
+            max-width: 600px;
+            width: 100%;
+            box-shadow: 0 25px 45px -12px rgba(0,0,0,0.2);
+            backdrop-filter: blur(4px);
+            transition: transform 0.3s;
+        }
+        .error-container:hover { transform: translateY(-5px); }
+        .error-code {
+            font-size: 8rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #0b2b44, #ffb347);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            margin-bottom: 1rem;
+        }
+        .error-title { font-size: 2rem; color: #1e4a6d; margin-bottom: 1rem; }
+        .error-text { font-size: 1.2rem; color: #2c5777; margin-bottom: 2rem; }
+        .home-button {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.8rem;
+            background: linear-gradient(135deg, #1e4a6d, #0f3b5e);
+            color: white;
+            padding: 0.8rem 2rem;
+            border-radius: 60px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: 0.2s;
+            box-shadow: 0 8px 20px rgba(0,40,70,0.3);
+        }
+        .home-button:hover { transform: translateY(-3px); box-shadow: 0 12px 25px rgba(0,40,70,0.4); }
+        .illustration { font-size: 6rem; margin-bottom: 1rem; animation: float 3s ease-in-out infinite; }
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-15px); }
+            100% { transform: translateY(0px); }
+        }
+        @media (max-width: 500px) {
+            .error-code { font-size: 5rem; }
+            .error-title { font-size: 1.5rem; }
+            .error-text { font-size: 1rem; }
+        }
+    </style>
+</head>
+<body>
+    <div class="error-container">
+        <div class="illustration">🔍</div>
+        <div class="error-code">404</div>
+        <div class="error-title">Страница не найдена</div>
+        <div class="error-text">Упс! Похоже, вы забрели в незнакомую часть нашего сайта.<br>При наличии вопросов напишите нам: cuzhima@yandex.ru</div>
+        <a href="/" class="home-button"><i class="fas fa-home"></i> Вернуться на главную</a>
+    </div>
+</body>
+</html>
