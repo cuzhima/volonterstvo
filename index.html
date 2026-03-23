@@ -7,16 +7,19 @@
     <!-- Leaflet (карта) -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- EmailJS -->
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
     <!-- Шрифты и иконки -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
-        /* все стили остаются без изменений (см. предыдущий ответ) */
+        /* ========== СТИЛИ ========== */
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
             font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
-            background: #f0f7fa;
+            background: linear-gradient(135deg, #e6f0fa 0%, #cfe3f5 100%);
             color: #1e2f4e;
             line-height: 1.5;
+            min-height: 100vh;
         }
         .app-header {
             background: linear-gradient(135deg, #0b2b44, #1b4a6b);
@@ -26,27 +29,26 @@
             flex-wrap: wrap;
             align-items: center;
             justify-content: space-between;
-            box-shadow: 0 4px 12px rgba(0,20,40,0.3);
+            box-shadow: 0 8px 20px rgba(0,20,40,0.2);
+            backdrop-filter: blur(2px);
         }
         .logo h1 {
             font-size: 1.8rem;
-            font-weight: 500;
-            letter-spacing: 1px;
+            font-weight: 600;
+            background: linear-gradient(135deg, #fff, #ffd89a);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
         }
-        .logo span {
-            font-size: 1rem;
-            opacity: 0.9;
-            display: block;
-        }
+        .logo span { font-size: 0.9rem; opacity: 0.9; }
         .nav {
             display: flex;
             flex-wrap: wrap;
             align-items: center;
-            gap: 1rem;
+            gap: 0.8rem;
         }
         .nav a, .nav button {
             color: white;
-            margin-left: 0.5rem;
             text-decoration: none;
             font-weight: 500;
             padding: 0.5rem 0;
@@ -59,11 +61,7 @@
         }
         .nav a:hover, .nav a.active, .nav button:hover {
             border-bottom-color: #ffb347;
-        }
-        .user-info {
-            display: flex;
-            align-items: center;
-            gap: 0.8rem;
+            transform: translateY(-2px);
         }
         .avatar-small {
             width: 40px;
@@ -78,13 +76,15 @@
             padding: 1.5rem;
         }
         .card {
-            background: white;
-            border-radius: 24px;
+            background: rgba(255,255,255,0.95);
+            border-radius: 32px;
             padding: 1.8rem;
-            box-shadow: 0 8px 24px rgba(0,32,64,0.1);
+            box-shadow: 0 20px 35px -12px rgba(0,0,0,0.15);
             margin-bottom: 2rem;
             backdrop-filter: blur(2px);
+            transition: transform 0.2s;
         }
+        .card:hover { transform: translateY(-3px); }
         .flex-row {
             display: flex;
             flex-wrap: wrap;
@@ -92,12 +92,12 @@
         }
         .filters-panel {
             flex: 1 1 280px;
-            background: #ffffffd9;
-            border-radius: 24px;
+            background: rgba(255,255,255,0.9);
+            border-radius: 28px;
             padding: 1.5rem;
             height: fit-content;
             backdrop-filter: blur(4px);
-            box-shadow: 0 4px 16px rgba(0,0,0,0.05);
+            box-shadow: 0 10px 25px -8px rgba(0,0,0,0.1);
         }
         .requests-panel {
             flex: 3 1 500px;
@@ -124,6 +124,13 @@
             border-radius: 40px;
             font-size: 1rem;
             margin-top: 0.3rem;
+            background: white;
+            transition: 0.2s;
+        }
+        .filter-group input:focus, .filter-group select:focus {
+            outline: none;
+            border-color: #ffb347;
+            box-shadow: 0 0 0 3px rgba(255,180,71,0.2);
         }
         .checkbox-grid {
             display: grid;
@@ -131,7 +138,7 @@
             gap: 0.3rem;
         }
         .btn {
-            background: #1e4a6d;
+            background: linear-gradient(135deg, #1e4a6d, #0f3b5e);
             color: white;
             border: none;
             padding: 0.8rem 2rem;
@@ -140,16 +147,20 @@
             font-weight: 600;
             cursor: pointer;
             transition: 0.2s;
-            box-shadow: 0 4px 8px rgba(0,40,70,0.2);
+            box-shadow: 0 4px 12px rgba(0,40,70,0.2);
         }
         .btn-outline {
             background: white;
             color: #1e4a6d;
             border: 2px solid #1e4a6d;
         }
+        .btn-outline:hover {
+            background: #1e4a6d;
+            color: white;
+        }
         .btn:hover {
-            background: #0f3752;
             transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0,40,70,0.3);
         }
         .request-grid {
             display: grid;
@@ -158,18 +169,35 @@
         }
         .request-card {
             background: white;
-            border-radius: 20px;
+            border-radius: 24px;
             padding: 1.2rem;
-            box-shadow: 0 6px 14px rgba(0, 0, 0, 0.04);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.05);
             transition: 0.2s;
-            border: 1px solid #e2f0f9;
+            border: 1px solid rgba(30,74,109,0.1);
             cursor: pointer;
             display: flex;
             gap: 1rem;
+            position: relative;
         }
         .request-card:hover {
             transform: scale(1.02);
             border-color: #ffb347;
+            box-shadow: 0 12px 25px rgba(0,0,0,0.1);
+        }
+        .share-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: none;
+            border: none;
+            font-size: 1.2rem;
+            cursor: pointer;
+            color: #1e4a6d;
+            transition: 0.2s;
+        }
+        .share-btn:hover {
+            color: #ffb347;
+            transform: scale(1.1);
         }
         .avatar-medium {
             width: 60px;
@@ -190,7 +218,7 @@
         .request-meta {
             display: flex;
             flex-wrap: wrap;
-            gap: 1rem 0.5rem;
+            gap: 0.5rem;
             font-size: 0.9rem;
             color: #2c5777;
             margin: 0.5rem 0;
@@ -217,6 +245,7 @@
             border-radius: 24px;
             margin-top: 1.5rem;
             z-index: 1;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.1);
         }
         .form-group {
             margin-bottom: 1.4rem;
@@ -232,6 +261,12 @@
             border: 1px solid #bcd3e6;
             border-radius: 40px;
             font-size: 1rem;
+            transition: 0.2s;
+        }
+        .form-control:focus {
+            outline: none;
+            border-color: #ffb347;
+            box-shadow: 0 0 0 3px rgba(255,180,71,0.2);
         }
         textarea.form-control {
             border-radius: 24px;
@@ -257,6 +292,9 @@
             text-align: center;
             padding: 2rem;
             color: #4b6a88;
+            background: rgba(255,255,255,0.6);
+            border-radius: 32px 32px 0 0;
+            margin-top: 2rem;
         }
         .hidden {
             display: none;
@@ -269,8 +307,14 @@
             color: white;
             padding: 1rem 2rem;
             border-radius: 60px;
-            box-shadow: 0 8px 20px black;
-            z-index: 999;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+            z-index: 1000;
+            backdrop-filter: blur(8px);
+            animation: fadeInUp 0.3s ease;
+        }
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
         }
         .profile-header {
             display: flex;
@@ -288,10 +332,81 @@
         .avatar-upload {
             margin-top: 1rem;
         }
+        .admin-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        .admin-item {
+            background: #f8fafc;
+            border-radius: 20px;
+            padding: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .admin-item button {
+            margin-left: 0.5rem;
+        }
+        .captcha {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            background: #f0f4f8;
+            padding: 0.5rem 1rem;
+            border-radius: 60px;
+        }
+        /* Стили для календаря и чата */
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        .calendar-item {
+            background: #f0f7fc;
+            border-radius: 20px;
+            padding: 1rem;
+            border-left: 5px solid #ffb347;
+        }
+        .chat-container {
+            border: 1px solid #bcd3e6;
+            border-radius: 24px;
+            padding: 1rem;
+            height: 400px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            background: #fff;
+        }
+        .chat-message {
+            margin: 0.5rem;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            max-width: 80%;
+            word-wrap: break-word;
+        }
+        .chat-message.sent {
+            background: #1e4a6d;
+            color: white;
+            align-self: flex-end;
+        }
+        .chat-message.received {
+            background: #e9f0f5;
+            color: #1e2f4e;
+            align-self: flex-start;
+        }
+        .review-stars {
+            color: #ffb347;
+            cursor: pointer;
+        }
         @media (max-width: 700px) {
             .app-header {
                 flex-direction: column;
                 text-align: center;
+                gap: 0.8rem;
             }
             .nav {
                 justify-content: center;
@@ -309,14 +424,10 @@
             <h1>🌱 Наставник Сочи</h1>
             <span>волонтёрская помощь учителям</span>
         </div>
-        <div class="nav" id="mainNav">
-            <!-- будет заполняться динамически -->
-        </div>
+        <div class="nav" id="mainNav"></div>
     </header>
 
-    <div id="pageContent" class="container">
-        <!-- динамически подгружается JS -->
-    </div>
+    <div id="pageContent" class="container"></div>
 
     <div class="footer">
         <p>🌊 Проект «Первые шаги в цифровое будущее» — Сочи 2026</p>
@@ -325,28 +436,30 @@
     <div id="toastMessage" class="toast hidden"></div>
 
     <script>
-        // ---------- КОНФИГУРАЦИЯ (ВАШИ ДАННЫЕ) ----------
+        // ========== КОНФИГУРАЦИЯ ==========
         const CONFIG = {
-            // ВАЖНО: замените 'ВАШ_ЛОГИН' на свой GitHub логин
             GIST_RAW_URL: 'https://gist.githubusercontent.com/ВАШ_ЛОГИН/7e660241ea87b34a2d3e69f40a24ca33/raw/data.txt',
-            // URL вашей serverless функции на Vercel (настройте позже)
             GIST_API_URL: 'https://ваш-проект.vercel.app/api/update-gist',
             ENCRYPTION_PASSWORD: 'sochi-volunteer-2026-secret'
         };
 
-        // ---------- ШИФРОВАНИЕ (AES-256-GCM) ----------
+        // EmailJS настройки (замените на свои)
+        const EMAILJS_CONFIG = {
+            PUBLIC_KEY: 'ВАШ_PUBLIC_KEY',
+            SERVICE_ID: 'service_xxx',
+            TEMPLATE_ID: 'template_xxx'
+        };
+        // Инициализация EmailJS (если ключи заданы)
+        if (EMAILJS_CONFIG.PUBLIC_KEY && EMAILJS_CONFIG.PUBLIC_KEY !== 'ВАШ_PUBLIC_KEY') {
+            emailjs.init(EMAILJS_CONFIG.PUBLIC_KEY);
+        }
+
+        // ========== ШИФРОВАНИЕ (AES-256-GCM) ==========
         async function getKeyFromPassword(password) {
             const enc = new TextEncoder();
-            const keyMaterial = await crypto.subtle.importKey(
-                'raw', enc.encode(password), { name: 'PBKDF2' }, false, ['deriveKey']
-            );
+            const keyMaterial = await crypto.subtle.importKey('raw', enc.encode(password), { name: 'PBKDF2' }, false, ['deriveKey']);
             return crypto.subtle.deriveKey(
-                {
-                    name: 'PBKDF2',
-                    salt: enc.encode('sochi-salt-2026'),
-                    iterations: 100000,
-                    hash: 'SHA-256'
-                },
+                { name: 'PBKDF2', salt: enc.encode('sochi-salt-2026'), iterations: 100000, hash: 'SHA-256' },
                 keyMaterial,
                 { name: 'AES-GCM', length: 256 },
                 false,
@@ -359,11 +472,7 @@
             const iv = crypto.getRandomValues(new Uint8Array(12));
             const enc = new TextEncoder();
             const encoded = enc.encode(JSON.stringify(data));
-            const ciphertext = await crypto.subtle.encrypt(
-                { name: 'AES-GCM', iv: iv },
-                key,
-                encoded
-            );
+            const ciphertext = await crypto.subtle.encrypt({ name: 'AES-GCM', iv: iv }, key, encoded);
             const combined = new Uint8Array(iv.length + new Uint8Array(ciphertext).length);
             combined.set(iv, 0);
             combined.set(new Uint8Array(ciphertext), iv.length);
@@ -375,26 +484,44 @@
             const combined = Uint8Array.from(atob(encryptedBase64), c => c.charCodeAt(0));
             const iv = combined.slice(0, 12);
             const ciphertext = combined.slice(12);
-            const decrypted = await crypto.subtle.decrypt(
-                { name: 'AES-GCM', iv: iv },
-                key,
-                ciphertext
-            );
+            const decrypted = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: iv }, key, ciphertext);
             const dec = new TextDecoder();
             return JSON.parse(dec.decode(decrypted));
         }
 
-        // ---------- ЗАГРУЗКА И СОХРАНЕНИЕ ДАННЫХ ----------
+        // ========== ХЭШИРОВАНИЕ ПАРОЛЯ ==========
+        async function hashPassword(password, salt) {
+            const enc = new TextEncoder();
+            const keyMaterial = await crypto.subtle.importKey('raw', enc.encode(password), { name: 'PBKDF2' }, false, ['deriveBits']);
+            const hashBuffer = await crypto.subtle.deriveBits(
+                { name: 'PBKDF2', salt: enc.encode(salt), iterations: 100000, hash: 'SHA-256' },
+                keyMaterial,
+                256
+            );
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        }
+
+        async function verifyPassword(password, salt, hash) {
+            const newHash = await hashPassword(password, salt);
+            return newHash === hash;
+        }
+
+        function generateSalt() {
+            return crypto.getRandomValues(new Uint8Array(16)).join('');
+        }
+
+        // ========== РАБОТА С ДАННЫМИ ==========
         async function loadDB() {
             try {
                 const response = await fetch(CONFIG.GIST_RAW_URL);
                 if (!response.ok) throw new Error('Не удалось загрузить данные');
                 const encrypted = await response.text();
-                if (!encrypted) return { users: [], requests: [] };
+                if (!encrypted) return { users: [], requests: [], messages: [], reviews: [] };
                 return await decryptData(encrypted.trim(), CONFIG.ENCRYPTION_PASSWORD);
             } catch (e) {
                 console.warn('Ошибка загрузки, возвращаю пустую БД', e);
-                return { users: [], requests: [] };
+                return { users: [], requests: [], messages: [], reviews: [] };
             }
         }
 
@@ -409,7 +536,7 @@
             return true;
         }
 
-        // ---------- УПРАВЛЕНИЕ ПОЛЬЗОВАТЕЛЕМ ----------
+        // ========== УПРАВЛЕНИЕ ПОЛЬЗОВАТЕЛЕМ ==========
         let currentUser = null;
 
         function setCurrentUser(user) {
@@ -436,13 +563,61 @@
             return currentUser;
         }
 
-        // ---------- НАВИГАЦИЯ ----------
+        async function ensureAdminExists() {
+            const db = await loadDB();
+            if (!db.users.some(u => u.role === 'admin')) {
+                const salt = generateSalt();
+                const adminHash = await hashPassword('admin123', salt);
+                db.users.push({
+                    id: 'admin_' + Date.now(),
+                    username: 'admin',
+                    passwordSalt: salt,
+                    passwordHash: adminHash,
+                    name: 'Администратор',
+                    role: 'admin',
+                    approved: true,
+                    email: '',
+                    contact: '',
+                    bio: '',
+                    avatar: null
+                });
+                await saveDB(db);
+                console.log('Администратор создан (логин: admin, пароль: admin123)');
+            }
+        }
+
+        // ========== ОТПРАВКА EMAIL (через EmailJS) ==========
+        async function sendEmailNotification(toEmail, subject, message) {
+            if (!EMAILJS_CONFIG.PUBLIC_KEY || EMAILJS_CONFIG.PUBLIC_KEY === 'ВАШ_PUBLIC_KEY') {
+                console.warn('EmailJS не настроен, уведомление не отправлено');
+                return;
+            }
+            try {
+                await emailjs.send(EMAILJS_CONFIG.SERVICE_ID, EMAILJS_CONFIG.TEMPLATE_ID, {
+                    to_email: toEmail,
+                    subject: subject,
+                    message: message,
+                });
+                console.log('Email отправлен');
+            } catch (err) {
+                console.error('Ошибка отправки email:', err);
+            }
+        }
+
+        // ========== НАВИГАЦИЯ ==========
         function updateNav() {
             const nav = document.getElementById('mainNav');
             if (currentUser) {
+                let adminLink = '';
+                let chatsLink = '';
+                if (currentUser.role === 'admin') adminLink = '<a href="#" data-page="admin">⚙️ Админка</a>';
+                if (currentUser.role === 'student') chatsLink = '<a href="#" data-page="chats">💬 Чаты</a>';
+                if (currentUser.role === 'teacher') chatsLink = '<a href="#" data-page="chats">💬 Чаты</a>';
                 nav.innerHTML = `
                     <a href="#" data-page="home">Главная</a>
-                    ${currentUser.role === 'teacher' ? '<a href="#" data-page="create">➕ Создать заявку</a>' : ''}
+                    ${currentUser.role === 'teacher' && currentUser.approved ? '<a href="#" data-page="create">➕ Создать заявку</a>' : ''}
+                    ${adminLink}
+                    ${chatsLink}
                     <a href="#" data-page="profile">👤 ${currentUser.name}</a>
                     <button data-page="logout">Выйти</button>
                 `;
@@ -453,7 +628,6 @@
                     <a href="#" data-page="about">О проекте</a>
                 `;
             }
-            // перепривязываем обработчики
             document.querySelectorAll('.nav a, .nav button').forEach(el => {
                 el.addEventListener('click', (e) => {
                     e.preventDefault();
@@ -468,7 +642,7 @@
             });
         }
 
-        // ---------- ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ ----------
+        // ========== ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ ==========
         let map = null;
         let markersLayer = null;
         let currentRequests = [];
@@ -476,15 +650,22 @@
         const districts = ['Центральный', 'Адлерский', 'Хостинский', 'Лазаревский'];
         const helpTypes = [
             { value: 'substitute', label: 'Замещение учителя' },
-            { value: 'assist', label: 'Помощь учителю (дисциплина, помощь детям)' },
+            { value: 'assist', label: 'Помощь учителю' },
             { value: 'event', label: 'Помощь в мероприятии' }
         ];
         const rewards = ['Еда', 'Ничего', 'Другое'];
 
-        // ---------- ФИЛЬТРЫ ----------
         let filters = { search: '', district: '', dateFrom: '', dateTo: '', reward: [], helpType: [] };
 
-        // ---------- ОТРИСОВКА ГЛАВНОЙ ----------
+        // ========== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ==========
+        function showToast(text) {
+            const toast = document.getElementById('toastMessage');
+            toast.innerText = text;
+            toast.classList.remove('hidden');
+            setTimeout(() => toast.classList.add('hidden'), 3000);
+        }
+
+        // ========== ОТРИСОВКА ГЛАВНОЙ ==========
         async function renderHome() {
             const db = await loadDB();
             currentRequests = db.requests || [];
@@ -493,9 +674,9 @@
             container.innerHTML = `
                 <div class="flex-row">
                     <div class="filters-panel">
-                        <h2 style="margin-bottom:1rem; color:#0b2b44;">🔍 Фильтры</h2>
+                        <h2 style="margin-bottom:1rem;">🔍 Фильтры</h2>
                         <div class="filter-group">
-                            <label>🔎 Поиск по названию/описанию</label>
+                            <label>🔎 Поиск</label>
                             <input type="text" id="filterSearch" placeholder="Введите слово..." value="${filters.search}">
                         </div>
                         <div class="filter-group">
@@ -514,30 +695,25 @@
                         <div class="filter-group">
                             <h3>🍎 Поощрение</h3>
                             <div class="checkbox-grid">
-                                ${rewards.map(r => `
-                                    <label><input type="checkbox" value="${r}" class="filterReward" ${filters.reward.includes(r)?'checked':''}> ${r}</label>
-                                `).join('')}
+                                ${rewards.map(r => `<label><input type="checkbox" value="${r}" class="filterReward" ${filters.reward.includes(r)?'checked':''}> ${r}</label>`).join('')}
                             </div>
                         </div>
                         <div class="filter-group">
                             <h3>👥 Вид помощи</h3>
                             <div class="checkbox-grid">
-                                ${helpTypes.map(t => `
-                                    <label><input type="checkbox" value="${t.value}" class="filterHelpType" ${filters.helpType.includes(t.value)?'checked':''}> ${t.label}</label>
-                                `).join('')}
+                                ${helpTypes.map(t => `<label><input type="checkbox" value="${t.value}" class="filterHelpType" ${filters.helpType.includes(t.value)?'checked':''}> ${t.label}</label>`).join('')}
                             </div>
                         </div>
-                        <button class="btn" id="applyFiltersBtn">Применить фильтры</button>
-                        <button class="btn-outline btn" id="resetFiltersBtn" style="margin-left:0.5rem;">Сброс</button>
+                        <button class="btn" id="applyFiltersBtn">Применить</button>
+                        <button class="btn-outline btn" id="resetFiltersBtn">Сброс</button>
                     </div>
                     <div class="requests-panel">
-                        <h2>📋 Текущие заявки (<span id="requestsCount">${currentRequests.length}</span>)</h2>
+                        <h2>📋 Заявки (<span id="requestsCount">${currentRequests.length}</span>)</h2>
                         <div id="map"></div>
                         <div id="requestsList" class="request-grid" style="margin-top:2rem;"></div>
                     </div>
                 </div>
             `;
-
             initMap();
             attachFilterEvents();
             applyFiltersToRequests();
@@ -546,9 +722,7 @@
         function initMap() {
             if (!map) {
                 map = L.map('map').setView([43.6, 39.73], 11);
-                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                    attribution: '© OpenStreetMap'
-                }).addTo(map);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }).addTo(map);
                 markersLayer = L.layerGroup().addTo(map);
             } else {
                 map.invalidateSize();
@@ -558,8 +732,7 @@
         function attachFilterEvents() {
             document.getElementById('applyFiltersBtn').addEventListener('click', applyFiltersToRequests);
             document.getElementById('resetFiltersBtn').addEventListener('click', resetFilters);
-            document.querySelectorAll('.filterReward').forEach(cb => cb.addEventListener('change', updateFiltersFromInputs));
-            document.querySelectorAll('.filterHelpType').forEach(cb => cb.addEventListener('change', updateFiltersFromInputs));
+            document.querySelectorAll('.filterReward, .filterHelpType').forEach(cb => cb.addEventListener('change', updateFiltersFromInputs));
             document.getElementById('filterSearch').addEventListener('input', updateFiltersFromInputs);
             document.getElementById('filterDistrict').addEventListener('change', updateFiltersFromInputs);
             document.getElementById('filterDateFrom').addEventListener('change', updateFiltersFromInputs);
@@ -582,8 +755,8 @@
                 if (filters.district && req.district !== filters.district) return false;
                 if (filters.dateFrom && req.dateTime < filters.dateFrom) return false;
                 if (filters.dateTo && req.dateTime > filters.dateTo) return false;
-                if (filters.reward.length > 0 && !filters.reward.includes(req.reward)) return false;
-                if (filters.helpType.length > 0 && !filters.helpType.includes(req.helpType)) return false;
+                if (filters.reward.length && !filters.reward.includes(req.reward)) return false;
+                if (filters.helpType.length && !filters.helpType.includes(req.helpType)) return false;
                 return true;
             });
             renderRequestsList(filtered);
@@ -599,13 +772,15 @@
         function renderRequestsList(requests) {
             const listDiv = document.getElementById('requestsList');
             if (requests.length === 0) {
-                listDiv.innerHTML = '<p style="grid-column:1/-1; text-align:center;">😕 Нет заявок по выбранным фильтрам</p>';
+                listDiv.innerHTML = '<p style="grid-column:1/-1; text-align:center;">😕 Нет заявок по фильтрам</p>';
                 return;
             }
             listDiv.innerHTML = requests.map(req => {
                 const teacher = currentUsers.find(u => u.id === req.userId) || { name: req.teacherName, avatar: null, contact: req.teacherContact };
+                const slotsLeft = req.slots - (req.booked ? req.booked.length : 0);
                 return `
                 <div class="request-card" data-id="${req.id}">
+                    <button class="share-btn" data-id="${req.id}" title="Поделиться"><i class="fas fa-share-alt"></i></button>
                     <img src="${teacher.avatar || 'https://via.placeholder.com/60?text=+'}" class="avatar-medium" alt="avatar">
                     <div class="request-content">
                         <div class="request-title">${req.title}</div>
@@ -614,22 +789,159 @@
                             <span class="badge">${new Date(req.dateTime).toLocaleDateString('ru-RU')}</span>
                             <span class="badge">${helpTypes.find(t => t.value === req.helpType)?.label || req.helpType}</span>
                             <span class="badge">🎁 ${req.reward}</span>
+                            <span class="badge">👥 Свободно: ${slotsLeft}/${req.slots}</span>
                         </div>
                         <p>${req.description.substring(0,80)}…</p>
-                        <div class="contact-chip">
-                            👤 ${teacher.name} · ☎️ ${teacher.contact}
-                        </div>
+                        <div class="contact-chip">👤 ${teacher.name} · ☎️ ${teacher.contact}</div>
                     </div>
                 </div>
             `}).join('');
             document.querySelectorAll('.request-card').forEach(card => {
-                card.addEventListener('click', () => {
+                card.addEventListener('click', (e) => {
+                    if (e.target.closest('.share-btn')) return;
                     const id = card.dataset.id;
                     const req = requests.find(r => r.id == id);
-                    const teacher = currentUsers.find(u => u.id === req.userId) || { name: req.teacherName, contact: req.teacherContact, bio: '' };
-                    alert(`👩‍🏫 Учитель: ${teacher.name}\n📞 Контакт: ${teacher.contact}\n📝 О себе: ${teacher.bio || 'не указано'}\n\n📍 ${req.address}\n\n${req.description}`);
+                    showRequestDetails(req);
+                });
+                const shareBtn = card.querySelector('.share-btn');
+                shareBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const id = shareBtn.dataset.id;
+                    const url = `${window.location.origin}${window.location.pathname}?request=${id}`;
+                    navigator.clipboard.writeText(url);
+                    showToast('Ссылка скопирована!');
                 });
             });
+        }
+
+        async function showRequestDetails(req) {
+            const db = await loadDB();
+            const teacher = db.users.find(u => u.id === req.userId) || { name: req.teacherName, contact: req.teacherContact, bio: '', email: '' };
+            const isVolunteer = currentUser && currentUser.role === 'student';
+            const hasBooked = currentUser && req.booked && req.booked.some(b => b.userId === currentUser.id);
+            const slotsLeft = req.slots - (req.booked ? req.booked.length : 0);
+            const canBook = isVolunteer && slotsLeft > 0 && !hasBooked && req.status !== 'completed';
+            const canCancel = isVolunteer && hasBooked && req.status !== 'completed';
+            const canComplete = currentUser && currentUser.id === req.userId && req.status === 'active';
+            const canReview = currentUser && currentUser.role === 'student' && hasBooked && req.status === 'completed' && !db.reviews.some(r => r.requestId === req.id && r.userId === currentUser.id);
+
+            // Получаем отзывы
+            const reviews = db.reviews.filter(r => r.requestId === req.id);
+            const avgRating = reviews.length ? (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1) : 'нет';
+
+            const content = `
+                <div class="card" style="max-width:800px; margin:0 auto;">
+                    <h2>${req.title}</h2>
+                    <p><strong>Учитель:</strong> ${teacher.name} (${teacher.contact})</p>
+                    <p><strong>Описание:</strong> ${req.description}</p>
+                    <p><strong>Адрес:</strong> ${req.address}</p>
+                    <p><strong>Дата:</strong> ${new Date(req.dateTime).toLocaleString('ru-RU')}</p>
+                    <p><strong>Вид помощи:</strong> ${helpTypes.find(t => t.value === req.helpType)?.label}</p>
+                    <p><strong>Поощрение:</strong> ${req.reward}</p>
+                    <p><strong>Свободно мест:</strong> ${slotsLeft} из ${req.slots}</p>
+                    <p><strong>Статус:</strong> ${req.status === 'active' ? 'Активна' : 'Завершена'}</p>
+                    <p><strong>Рейтинг:</strong> ${avgRating} (${reviews.length} отзывов)</p>
+                    <div class="reviews">
+                        <h3>Отзывы</h3>
+                        ${reviews.map(r => {
+                            const user = db.users.find(u => u.id === r.userId);
+                            return `<div><strong>${user?.name || 'Аноним'}</strong> (${'★'.repeat(r.rating)}${'☆'.repeat(5-r.rating)}): ${r.text}</div>`;
+                        }).join('') || '<p>Нет отзывов</p>'}
+                    </div>
+                    ${canBook ? `<button id="bookBtn" class="btn">📌 Забронировать слот</button>` : ''}
+                    ${canCancel ? `<button id="cancelBtn" class="btn-outline btn">❌ Отменить бронь</button>` : ''}
+                    ${canComplete ? `<button id="completeBtn" class="btn">✅ Завершить мероприятие</button>` : ''}
+                    ${canReview ? `<div><textarea id="reviewText" placeholder="Ваш отзыв" rows="3" class="form-control"></textarea>
+                                   <div id="starRating" class="review-stars">★★★★★</div>
+                                   <button id="submitReviewBtn" class="btn">Оставить отзыв</button></div>` : ''}
+                    <button id="closeDetails" class="btn-outline btn">Закрыть</button>
+                </div>
+            `;
+            document.getElementById('pageContent').innerHTML = content;
+            document.getElementById('closeDetails').addEventListener('click', () => navigate('home'));
+            if (canBook) document.getElementById('bookBtn').addEventListener('click', async () => {
+                await bookSlot(req.id);
+                navigate('home');
+            });
+            if (canCancel) document.getElementById('cancelBtn').addEventListener('click', async () => {
+                await cancelBooking(req.id);
+                navigate('home');
+            });
+            if (canComplete) document.getElementById('completeBtn').addEventListener('click', async () => {
+                await completeRequest(req.id);
+                navigate('home');
+            });
+            if (canReview) {
+                let rating = 5;
+                const starsDiv = document.getElementById('starRating');
+                starsDiv.addEventListener('click', (e) => {
+                    const starIndex = [...starsDiv.children].indexOf(e.target);
+                    if (starIndex >= 0) rating = starIndex + 1;
+                    starsDiv.innerHTML = '★'.repeat(rating) + '☆'.repeat(5-rating);
+                });
+                document.getElementById('submitReviewBtn').addEventListener('click', async () => {
+                    const text = document.getElementById('reviewText').value.trim();
+                    if (!text) { showToast('Напишите отзыв'); return; }
+                    await addReview(req.id, rating, text);
+                    navigate('home');
+                });
+            }
+        }
+
+        async function bookSlot(requestId) {
+            const db = await loadDB();
+            const req = db.requests.find(r => r.id === requestId);
+            if (!req || req.status !== 'active') { showToast('Заявка недоступна'); return; }
+            const slotsLeft = req.slots - (req.booked ? req.booked.length : 0);
+            if (slotsLeft <= 0) { showToast('Нет свободных мест'); return; }
+            if (!req.booked) req.booked = [];
+            req.booked.push({ userId: currentUser.id, bookedAt: new Date().toISOString() });
+            await saveDB(db);
+            showToast('Слот забронирован!');
+            // Отправка email
+            const teacher = db.users.find(u => u.id === req.userId);
+            if (teacher && teacher.email) {
+                await sendEmailNotification(teacher.email, 'Новое бронирование', `Ученик ${currentUser.name} забронировал слот на ваше мероприятие "${req.title}".`);
+            }
+        }
+
+        async function cancelBooking(requestId) {
+            const db = await loadDB();
+            const req = db.requests.find(r => r.id === requestId);
+            if (req && req.booked) {
+                req.booked = req.booked.filter(b => b.userId !== currentUser.id);
+                await saveDB(db);
+                showToast('Бронь отменена');
+                // Отправка email учителю
+                const teacher = db.users.find(u => u.id === req.userId);
+                if (teacher && teacher.email) {
+                    await sendEmailNotification(teacher.email, 'Отмена бронирования', `Ученик ${currentUser.name} отменил бронь на "${req.title}".`);
+                }
+            }
+        }
+
+        async function completeRequest(requestId) {
+            const db = await loadDB();
+            const req = db.requests.find(r => r.id === requestId);
+            if (req) {
+                req.status = 'completed';
+                await saveDB(db);
+                showToast('Мероприятие завершено, теперь волонтёры могут оставить отзывы');
+            }
+        }
+
+        async function addReview(requestId, rating, text) {
+            const db = await loadDB();
+            db.reviews.push({
+                id: Date.now() + '-' + Math.random(),
+                requestId,
+                userId: currentUser.id,
+                rating,
+                text,
+                createdAt: new Date().toISOString()
+            });
+            await saveDB(db);
+            showToast('Спасибо за отзыв!');
         }
 
         function updateMapMarkers(requests) {
@@ -645,64 +957,28 @@
             });
         }
 
-        // ---------- СТРАНИЦА СОЗДАНИЯ ЗАЯВКИ ----------
+        // ========== СОЗДАНИЕ ЗАЯВКИ ==========
         async function renderCreate() {
-            if (!currentUser || currentUser.role !== 'teacher') {
-                showToast('Только учителя могут создавать заявки');
+            if (!currentUser || currentUser.role !== 'teacher' || !currentUser.approved) {
+                showToast('Только одобренные учителя могут создавать заявки');
                 return navigate('home');
             }
             const container = document.getElementById('pageContent');
             container.innerHTML = `
                 <div class="card" style="max-width:800px; margin:0 auto;">
-                    <h2>📝 Новая заявка для волонтёров</h2>
+                    <h2>📝 Новая заявка</h2>
                     <form id="createRequestForm">
-                        <div class="form-group">
-                            <label>Название*</label>
-                            <input class="form-control" id="title" required>
-                        </div>
-                        <div class="form-group">
-                            <label>Описание*</label>
-                            <textarea class="form-control" id="description" rows="3" required></textarea>
-                        </div>
-                        <div class="form-group">
-                            <label>Адрес учреждения (с районом)*</label>
-                            <div class="district-selector">
-                                <input class="form-control" id="address" placeholder="например, ул. Юных ленинцев, 5" required style="flex:2;">
-                                <select id="district" class="form-control" required style="flex:1;">
-                                    <option value="">Район</option>
-                                    ${districts.map(d => `<option value="${d}">${d}</option>`).join('')}
-                                </select>
-                            </div>
-                            <small>📍 Укажите адрес, затем нажмите "Найти на карте"</small>
-                            <button type="button" class="btn-outline btn" id="geocodeBtn" style="margin-top:0.5rem;">Найти на карте</button>
-                            <div id="mapPick" style="height:250px; margin-top:1rem; border-radius:20px;"></div>
-                            <input type="hidden" id="lat" value="">
-                            <input type="hidden" id="lng" value="">
-                        </div>
-                        <div class="form-group">
-                            <label>Дата и время мероприятия*</label>
-                            <input type="datetime-local" class="form-control" id="dateTime" required>
-                        </div>
-                        <div class="form-group">
-                            <label>Поощрение волонтёру</label>
-                            <select id="reward" class="form-control">
-                                ${rewards.map(r => `<option value="${r}">${r}</option>`).join('')}
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label>Вид помощи*</label>
-                            <div class="radio-group">
-                                ${helpTypes.map(t => `
-                                    <label><input type="radio" name="helpType" value="${t.value}" required> ${t.label}</label>
-                                `).join('')}
-                            </div>
-                        </div>
-                        <button type="submit" class="btn">📨 Опубликовать заявку</button>
+                        <div class="form-group"><label>Название*</label><input class="form-control" id="title" required></div>
+                        <div class="form-group"><label>Описание*</label><textarea class="form-control" id="description" rows="3" required></textarea></div>
+                        <div class="form-group"><label>Адрес*</label><div class="district-selector"><input class="form-control" id="address" placeholder="ул. Ленина, 1" required><select id="district" class="form-control" required>${districts.map(d => `<option value="${d}">${d}</option>`).join('')}</select></div><button type="button" class="btn-outline btn" id="geocodeBtn">Найти на карте</button><div id="mapPick" style="height:250px; margin-top:1rem;"></div><input type="hidden" id="lat"><input type="hidden" id="lng"></div>
+                        <div class="form-group"><label>Дата и время*</label><input type="datetime-local" class="form-control" id="dateTime" required></div>
+                        <div class="form-group"><label>Количество мест*</label><input type="number" class="form-control" id="slots" min="1" value="1" required></div>
+                        <div class="form-group"><label>Поощрение</label><select id="reward" class="form-control">${rewards.map(r => `<option value="${r}">${r}</option>`).join('')}</select></div>
+                        <div class="form-group"><label>Вид помощи*</label><div class="radio-group">${helpTypes.map(t => `<label><input type="radio" name="helpType" value="${t.value}" required> ${t.label}</label>`).join('')}</div></div>
+                        <button type="submit" class="btn">Опубликовать</button>
                     </form>
                 </div>
             `;
-
-            // карта для выбора местоположения
             const mapPick = L.map('mapPick').setView([43.6, 39.73], 13);
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(mapPick);
             let marker = null;
@@ -713,11 +989,8 @@
                 document.getElementById('lng').value = e.latlng.lng;
                 fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${e.latlng.lat}&lon=${e.latlng.lng}&accept-language=ru`)
                     .then(res => res.json())
-                    .then(data => {
-                        if (data.display_name) document.getElementById('address').value = data.display_name;
-                    });
+                    .then(data => { if (data.display_name) document.getElementById('address').value = data.display_name; });
             });
-
             document.getElementById('geocodeBtn').addEventListener('click', () => {
                 const addr = document.getElementById('address').value;
                 if (!addr) return;
@@ -735,7 +1008,6 @@
                         } else alert('Адрес не найден');
                     });
             });
-
             document.getElementById('createRequestForm').addEventListener('submit', async (e) => {
                 e.preventDefault();
                 const newReq = {
@@ -750,13 +1022,15 @@
                     lat: parseFloat(document.getElementById('lat').value) || null,
                     lng: parseFloat(document.getElementById('lng').value) || null,
                     dateTime: document.getElementById('dateTime').value,
+                    slots: parseInt(document.getElementById('slots').value),
+                    booked: [],
                     reward: document.getElementById('reward').value,
                     helpType: document.querySelector('input[name="helpType"]:checked')?.value,
+                    status: 'active',
                     createdAt: new Date().toISOString()
                 };
                 if (!newReq.helpType) { alert('Выберите вид помощи'); return; }
                 if (!newReq.lat || !newReq.lng) { alert('Укажите местоположение на карте'); return; }
-
                 const db = await loadDB();
                 db.requests.push(newReq);
                 await saveDB(db);
@@ -765,52 +1039,62 @@
             });
         }
 
-        // ---------- ПРОФИЛЬ ----------
+        // ========== ПРОФИЛЬ ==========
         async function renderProfile() {
             if (!currentUser) { navigate('login'); return; }
+            const db = await loadDB();
             const container = document.getElementById('pageContent');
+            let calendarHtml = '';
+            if (currentUser.role === 'student') {
+                const myBookings = db.requests.filter(r => r.booked && r.booked.some(b => b.userId === currentUser.id));
+                calendarHtml = `
+                    <h3>📅 Мой календарь мероприятий</h3>
+                    <div class="calendar-grid">
+                        ${myBookings.map(r => `
+                            <div class="calendar-item">
+                                <strong>${r.title}</strong><br>
+                                📅 ${new Date(r.dateTime).toLocaleString('ru-RU')}<br>
+                                📍 ${r.address}<br>
+                                👩‍🏫 ${r.teacherName}<br>
+                                <button class="btn-outline btn" data-id="${r.id}">Подробнее</button>
+                            </div>
+                        `).join('') || '<p>Нет запланированных мероприятий</p>'}
+                    </div>
+                `;
+            }
             container.innerHTML = `
                 <div class="card" style="max-width:600px; margin:0 auto;">
                     <h2>👤 Личный кабинет</h2>
                     <div class="profile-header">
                         <img src="${currentUser.avatar || 'https://via.placeholder.com/120?text=Фото'}" class="avatar-large" id="profileAvatar">
-                        <div style="flex:1;">
+                        <div>
                             <p><strong>Имя:</strong> ${currentUser.name}</p>
-                            <p><strong>Роль:</strong> ${currentUser.role === 'teacher' ? 'Учитель' : 'Ученик'}</p>
+                            <p><strong>Роль:</strong> ${currentUser.role === 'teacher' ? 'Учитель' : (currentUser.role === 'admin' ? 'Администратор' : 'Ученик')}</p>
+                            <p><strong>Email:</strong> ${currentUser.email || 'не указан'}</p>
                             <p><strong>Контакт:</strong> ${currentUser.contact || 'не указан'}</p>
                             <p><strong>О себе:</strong> ${currentUser.bio || 'не заполнено'}</p>
+                            ${currentUser.role === 'teacher' ? `<p><strong>Статус:</strong> ${currentUser.approved ? '✅ Подтверждён' : '⏳ Ожидает подтверждения'}</p>` : ''}
                         </div>
                     </div>
                     <hr>
                     <h3>Редактировать профиль</h3>
                     <form id="profileForm">
-                        <div class="form-group">
-                            <label>Имя</label>
-                            <input class="form-control" id="editName" value="${currentUser.name}" required>
-                        </div>
-                        <div class="form-group">
-                            <label>Контакт (телефон/email)</label>
-                            <input class="form-control" id="editContact" value="${currentUser.contact || ''}">
-                        </div>
-                        <div class="form-group">
-                            <label>О себе</label>
-                            <textarea class="form-control" id="editBio" rows="3">${currentUser.bio || ''}</textarea>
-                        </div>
-                        <div class="form-group avatar-upload">
-                            <label>Аватар (нажмите для выбора файла)</label>
-                            <input type="file" id="avatarInput" accept="image/*">
-                            <small>Изображение будет сжато до 64x64</small>
-                        </div>
-                        <button type="submit" class="btn">Сохранить изменения</button>
+                        <div class="form-group"><label>Имя</label><input class="form-control" id="editName" value="${currentUser.name}" required></div>
+                        <div class="form-group"><label>Email (для уведомлений)</label><input type="email" class="form-control" id="editEmail" value="${currentUser.email || ''}"></div>
+                        <div class="form-group"><label>Контакт</label><input class="form-control" id="editContact" value="${currentUser.contact || ''}"></div>
+                        <div class="form-group"><label>О себе</label><textarea class="form-control" id="editBio" rows="3">${currentUser.bio || ''}</textarea></div>
+                        <div class="form-group"><label>Аватар</label><input type="file" id="avatarInput" accept="image/*"><small>Сжатие до 64x64</small></div>
+                        <button type="submit" class="btn">Сохранить</button>
                     </form>
+                    ${calendarHtml}
                 </div>
             `;
-
             document.getElementById('avatarInput').addEventListener('change', handleAvatarUpload);
             document.getElementById('profileForm').addEventListener('submit', async (e) => {
                 e.preventDefault();
                 const updated = { ...currentUser,
                     name: document.getElementById('editName').value,
+                    email: document.getElementById('editEmail').value,
                     contact: document.getElementById('editContact').value,
                     bio: document.getElementById('editBio').value,
                 };
@@ -821,6 +1105,13 @@
                 setCurrentUser(updated);
                 showToast('Профиль обновлён');
                 renderProfile();
+            });
+            document.querySelectorAll('.calendar-item .btn').forEach(btn => {
+                btn.addEventListener('click', async () => {
+                    const id = btn.dataset.id;
+                    const req = db.requests.find(r => r.id === id);
+                    if (req) showRequestDetails(req);
+                });
             });
         }
 
@@ -846,107 +1137,296 @@
             reader.readAsDataURL(file);
         }
 
-        // ---------- ВХОД / РЕГИСТРАЦИЯ ----------
-        async function renderLogin() {
+        // ========== ЧАТ ==========
+        async function renderChats() {
+            if (!currentUser) { navigate('login'); return; }
+            const db = await loadDB();
+            // Найти все заявки, в которых пользователь участвует (как учитель или волонтёр)
+            let relevantRequests = [];
+            if (currentUser.role === 'teacher') {
+                relevantRequests = db.requests.filter(r => r.userId === currentUser.id);
+            } else if (currentUser.role === 'student') {
+                relevantRequests = db.requests.filter(r => r.booked && r.booked.some(b => b.userId === currentUser.id));
+            }
             const container = document.getElementById('pageContent');
             container.innerHTML = `
-                <div class="card" style="max-width:400px; margin:0 auto;">
-                    <h2>🔐 Вход / Регистрация</h2>
-                    <form id="loginForm">
-                        <div class="form-group">
-                            <label>Ваше имя</label>
-                            <input class="form-control" id="loginName" required>
-                        </div>
-                        <div class="form-group">
-                            <label>Вы</label>
-                            <select class="form-control" id="loginRole">
-                                <option value="teacher">Учитель</option>
-                                <option value="student">Ученик</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label>Контакт (телефон/email)</label>
-                            <input class="form-control" id="loginContact">
-                        </div>
-                        <p style="font-size:0.9rem;">Если имя уже существует, вы войдёте в существующую учётную запись (без пароля).</p>
-                        <button type="submit" class="btn">Войти / Зарегистрироваться</button>
-                    </form>
+                <div class="card">
+                    <h2>💬 Чаты по заявкам</h2>
+                    <div id="chatsList">
+                        ${relevantRequests.map(req => `
+                            <div class="admin-item" data-id="${req.id}">
+                                <div><strong>${req.title}</strong> (${new Date(req.dateTime).toLocaleDateString()})</div>
+                                <button class="btn openChatBtn" data-id="${req.id}">Открыть чат</button>
+                            </div>
+                        `).join('') || '<p>Нет доступных чатов</p>'}
+                    </div>
                 </div>
             `;
+            document.querySelectorAll('.openChatBtn').forEach(btn => {
+                btn.addEventListener('click', async () => {
+                    const requestId = btn.dataset.id;
+                    await renderChatWindow(requestId);
+                });
+            });
+        }
+
+        async function renderChatWindow(requestId) {
+            const db = await loadDB();
+            const req = db.requests.find(r => r.id === requestId);
+            if (!req) return;
+            const otherUserId = (currentUser.id === req.userId) ? (req.booked && req.booked[0]?.userId) : req.userId;
+            if (!otherUserId) { showToast('Нет собеседника'); return; }
+            const messages = db.messages.filter(m => m.requestId === requestId && ((m.fromUserId === currentUser.id && m.toUserId === otherUserId) || (m.fromUserId === otherUserId && m.toUserId === currentUser.id)));
+            messages.sort((a,b) => a.timestamp - b.timestamp);
+            const container = document.getElementById('pageContent');
+            container.innerHTML = `
+                <div class="card">
+                    <h2>Чат: ${req.title}</h2>
+                    <div id="chatMessages" class="chat-container">
+                        ${messages.map(m => `
+                            <div class="chat-message ${m.fromUserId === currentUser.id ? 'sent' : 'received'}">
+                                <strong>${m.fromUserId === currentUser.id ? 'Вы' : (db.users.find(u=>u.id===m.fromUserId)?.name || 'Пользователь')}:</strong> ${m.text}<br>
+                                <small>${new Date(m.timestamp).toLocaleString()}</small>
+                            </div>
+                        `).join('')}
+                    </div>
+                    <div class="form-group">
+                        <textarea id="newMessage" rows="2" class="form-control" placeholder="Введите сообщение..."></textarea>
+                        <button id="sendMsgBtn" class="btn">Отправить</button>
+                    </div>
+                    <button id="backToChats" class="btn-outline btn">Назад к чатам</button>
+                </div>
+            `;
+            const messagesDiv = document.getElementById('chatMessages');
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+            document.getElementById('sendMsgBtn').addEventListener('click', async () => {
+                const text = document.getElementById('newMessage').value.trim();
+                if (!text) return;
+                const newMsg = {
+                    id: Date.now() + '-' + Math.random(),
+                    requestId,
+                    fromUserId: currentUser.id,
+                    toUserId: otherUserId,
+                    text,
+                    timestamp: Date.now()
+                };
+                const db = await loadDB();
+                db.messages.push(newMsg);
+                await saveDB(db);
+                renderChatWindow(requestId);
+            });
+            document.getElementById('backToChats').addEventListener('click', () => renderChats());
+        }
+
+        // ========== ВХОД / РЕГИСТРАЦИЯ ==========
+        async function renderLogin() {
+            const num1 = Math.floor(Math.random() * 10) + 1;
+            const num2 = Math.floor(Math.random() * 10) + 1;
+            const captchaAnswer = num1 + num2;
+            sessionStorage.setItem('captchaAnswer', captchaAnswer);
+            const container = document.getElementById('pageContent');
+            container.innerHTML = `
+                <div class="card" style="max-width:450px; margin:0 auto;">
+                    <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem;">
+                        <button id="showLoginBtn" class="btn" style="flex:1;">Вход</button>
+                        <button id="showRegisterBtn" class="btn-outline btn" style="flex:1;">Регистрация</button>
+                    </div>
+                    <div id="loginFormDiv">
+                        <h2>🔐 Вход</h2>
+                        <form id="loginForm">
+                            <div class="form-group"><label>Логин</label><input class="form-control" id="loginUsername" required></div>
+                            <div class="form-group"><label>Пароль</label><input type="password" class="form-control" id="loginPassword" required></div>
+                            <button type="submit" class="btn">Войти</button>
+                        </form>
+                    </div>
+                    <div id="registerFormDiv" style="display:none;">
+                        <h2>📝 Регистрация</h2>
+                        <form id="registerForm">
+                            <div class="form-group"><label>Логин*</label><input class="form-control" id="regUsername" required></div>
+                            <div class="form-group"><label>Имя*</label><input class="form-control" id="regName" required></div>
+                            <div class="form-group"><label>Пароль*</label><input type="password" class="form-control" id="regPassword" required></div>
+                            <div class="form-group"><label>Подтвердите пароль*</label><input type="password" class="form-control" id="regPasswordConfirm" required></div>
+                            <div class="form-group"><label>Email (для уведомлений)</label><input type="email" class="form-control" id="regEmail"></div>
+                            <div class="form-group"><label>Контакт (телефон)</label><input class="form-control" id="regContact"></div>
+                            <div class="form-group"><label>Роль</label><select class="form-control" id="regRole"><option value="student">Ученик (доступ сразу)</option><option value="teacher">Учитель (требуется подтверждение)</option></select></div>
+                            <div class="form-group"><label>Капча: сколько будет ${num1} + ${num2}?</label><input class="form-control" id="captchaInput" required></div>
+                            <button type="submit" class="btn">Зарегистрироваться</button>
+                        </form>
+                    </div>
+                </div>
+            `;
+            document.getElementById('showLoginBtn').addEventListener('click', () => {
+                document.getElementById('loginFormDiv').style.display = 'block';
+                document.getElementById('registerFormDiv').style.display = 'none';
+                document.getElementById('showLoginBtn').classList.add('btn');
+                document.getElementById('showLoginBtn').classList.remove('btn-outline');
+                document.getElementById('showRegisterBtn').classList.add('btn-outline');
+                document.getElementById('showRegisterBtn').classList.remove('btn');
+            });
+            document.getElementById('showRegisterBtn').addEventListener('click', () => {
+                document.getElementById('loginFormDiv').style.display = 'none';
+                document.getElementById('registerFormDiv').style.display = 'block';
+                document.getElementById('showRegisterBtn').classList.add('btn');
+                document.getElementById('showRegisterBtn').classList.remove('btn-outline');
+                document.getElementById('showLoginBtn').classList.add('btn-outline');
+                document.getElementById('showLoginBtn').classList.remove('btn');
+            });
             document.getElementById('loginForm').addEventListener('submit', async (e) => {
                 e.preventDefault();
-                const name = document.getElementById('loginName').value.trim();
-                const role = document.getElementById('loginRole').value;
-                const contact = document.getElementById('loginContact').value;
+                const username = document.getElementById('loginUsername').value.trim();
+                const password = document.getElementById('loginPassword').value;
                 const db = await loadDB();
-                let user = db.users.find(u => u.name === name && u.role === role);
-                if (!user) {
-                    user = {
-                        id: 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6),
-                        name,
-                        role,
-                        contact,
-                        bio: '',
-                        avatar: null
-                    };
-                    db.users.push(user);
-                    await saveDB(db);
+                const user = db.users.find(u => u.username === username);
+                if (!user || !(await verifyPassword(password, user.passwordSalt, user.passwordHash))) {
+                    showToast('Неверный логин или пароль');
+                    return;
+                }
+                if (user.role === 'teacher' && !user.approved) {
+                    showToast('Учётная запись ожидает подтверждения');
+                    return;
                 }
                 setCurrentUser(user);
                 navigate('home');
             });
+            document.getElementById('registerForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const captchaInput = document.getElementById('captchaInput').value;
+                const captchaAnswer = sessionStorage.getItem('captchaAnswer');
+                if (parseInt(captchaInput) !== parseInt(captchaAnswer)) {
+                    showToast('Неверный ответ капчи');
+                    return;
+                }
+                const username = document.getElementById('regUsername').value.trim();
+                const name = document.getElementById('regName').value.trim();
+                const password = document.getElementById('regPassword').value;
+                const passwordConfirm = document.getElementById('regPasswordConfirm').value;
+                const email = document.getElementById('regEmail').value.trim();
+                const contact = document.getElementById('regContact').value;
+                const role = document.getElementById('regRole').value;
+                if (password !== passwordConfirm) { showToast('Пароли не совпадают'); return; }
+                const db = await loadDB();
+                if (db.users.some(u => u.username === username)) { showToast('Логин занят'); return; }
+                const salt = generateSalt();
+                const hash = await hashPassword(password, salt);
+                const newUser = {
+                    id: 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6),
+                    username,
+                    passwordSalt: salt,
+                    passwordHash: hash,
+                    name,
+                    role,
+                    approved: role === 'student',
+                    email,
+                    contact,
+                    bio: '',
+                    avatar: null
+                };
+                db.users.push(newUser);
+                await saveDB(db);
+                if (role === 'teacher') {
+                    showToast('Регистрация успешна! После подтверждения администратором вы сможете войти.');
+                } else {
+                    showToast('Регистрация успешна! Войдите.');
+                }
+                navigate('login');
+            });
         }
 
-        // ---------- О ПРОЕКТЕ ----------
+        // ========== АДМИНКА ==========
+        async function renderAdmin() {
+            if (!currentUser || currentUser.role !== 'admin') { showToast('Доступ запрещён'); return navigate('home'); }
+            const db = await loadDB();
+            const pendingTeachers = db.users.filter(u => u.role === 'teacher' && !u.approved);
+            const container = document.getElementById('pageContent');
+            container.innerHTML = `
+                <div class="card">
+                    <h2>⚙️ Админ-панель</h2>
+                    <h3>Учителя, ожидающие подтверждения</h3>
+                    ${pendingTeachers.length === 0 ? '<p>Нет ожидающих.</p>' : `
+                        <div class="admin-list">
+                            ${pendingTeachers.map(teacher => `
+                                <div class="admin-item" data-id="${teacher.id}">
+                                    <div><strong>${teacher.name}</strong> (${teacher.username})<br>Email: ${teacher.email || 'нет'}<br>Контакт: ${teacher.contact || 'нет'}<br>О себе: ${teacher.bio || 'нет'}</div>
+                                    <div><button class="btn approveBtn" data-id="${teacher.id}">✅ Одобрить</button><button class="btn-outline btn rejectBtn" data-id="${teacher.id}">❌ Отклонить</button></div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    `}
+                </div>
+            `;
+            document.querySelectorAll('.approveBtn').forEach(btn => {
+                btn.addEventListener('click', async () => {
+                    const id = btn.dataset.id;
+                    const db = await loadDB();
+                    const teacher = db.users.find(u => u.id === id);
+                    if (teacher) {
+                        teacher.approved = true;
+                        await saveDB(db);
+                        showToast(`Учитель ${teacher.name} одобрен`);
+                        if (teacher.email) await sendEmailNotification(teacher.email, 'Регистрация одобрена', `Здравствуйте, ${teacher.name}! Ваша учётная запись учителя одобрена. Теперь вы можете создавать заявки на волонтёров.`);
+                        renderAdmin();
+                    }
+                });
+            });
+            document.querySelectorAll('.rejectBtn').forEach(btn => {
+                btn.addEventListener('click', async () => {
+                    const id = btn.dataset.id;
+                    if (confirm('Удалить пользователя?')) {
+                        const db = await loadDB();
+                        db.users = db.users.filter(u => u.id !== id);
+                        await saveDB(db);
+                        showToast('Учитель отклонён');
+                        renderAdmin();
+                    }
+                });
+            });
+        }
+
+        // ========== О ПРОЕКТЕ ==========
         function renderAbout() {
             document.getElementById('pageContent').innerHTML = `
                 <div class="card">
                     <h2>🌿 О проекте «Будь наставником!»</h2>
-                    <p style="font-size:1.2rem;">Волонтёрская помощь учителям дополнительного образования в Сочи</p>
-                    <hr style="margin:1rem 0;">
-                    <h3>📋 Задачи, которые мы реализовали:</h3>
-                    <ul style="margin-left:2rem;">
-                        <li>✅ Опрос учителей и учеников (выяснили потребности: помощь в мероприятиях, дисциплине, замещении)</li>
-                        <li>✅ Созданы информационные листовки и посты для соцсетей</li>
-                        <li>✅ Проведено мотивационное событие в школе (вдохновили 30+ старшеклассников)</li>
-                        <li>✅ Сообщество в Telegram для быстрого сбора заявок</li>
-                        <li>✅ <strong>Данный сайт</strong> — система обмена заявками с личными кабинетами и аватарами</li>
-                        <li>✅ Разработаны правила этикета помощника</li>
-                        <li>✅ Проведены 2 пробных мероприятия: олимпиада по информатике и открытый урок</li>
-                    </ul>
-                    <p>🔐 Все данные хранятся в зашифрованном виде (AES-256) в GitHub Gist. Карта OpenStreetMap.</p>
+                    <p>Волонтёрская помощь учителям дополнительного образования в Сочи</p>
+                    <hr>
+                    <h3>📋 Задачи:</h3>
+                    <ul><li>✅ Опрос учителей и учеников</li><li>✅ Созданы информационные листовки</li><li>✅ Проведено мотивационное событие</li><li>✅ Сообщество в Telegram</li><li>✅ Данный сайт с шифрованием, бронированием, чатом и отзывами</li><li>✅ Разработаны правила этикета</li><li>✅ Проведены пробные мероприятия</li></ul>
+                    <p>🔐 Все данные зашифрованы (AES-256) и хранятся в GitHub Gist. Карта OpenStreetMap.</p>
                     <p>⭐ Присоединяйтесь к волонтёрскому движению Сочи!</p>
                 </div>
             `;
         }
 
-        // ---------- НАВИГАЦИЯ ----------
+        // ========== НАВИГАЦИЯ ==========
         async function navigate(page) {
             document.querySelectorAll('.nav a, .nav button').forEach(el => el.classList.remove('active'));
             const activeEl = Array.from(document.querySelectorAll('.nav a, .nav button')).find(el => el.dataset.page === page);
             if (activeEl) activeEl.classList.add('active');
-
             if (page === 'home') await renderHome();
             else if (page === 'create') await renderCreate();
             else if (page === 'profile') await renderProfile();
             else if (page === 'login') await renderLogin();
+            else if (page === 'admin') await renderAdmin();
+            else if (page === 'chats') await renderChats();
             else if (page === 'about') renderAbout();
         }
 
-        // ---------- TOAST ----------
-        function showToast(text) {
-            const toast = document.getElementById('toastMessage');
-            toast.innerText = text;
-            toast.classList.remove('hidden');
-            setTimeout(() => toast.classList.add('hidden'), 3000);
-        }
-
-        // ---------- ИНИЦИАЛИЗАЦИЯ ----------
+        // ========== ИНИЦИАЛИЗАЦИЯ ==========
         window.addEventListener('load', async () => {
+            await ensureAdminExists();
             await loadCurrentUser();
             updateNav();
-            const initialPage = window.location.hash.replace('#', '') || 'home';
-            navigate(initialPage);
+            const urlParams = new URLSearchParams(window.location.search);
+            const requestId = urlParams.get('request');
+            if (requestId) {
+                const db = await loadDB();
+                const req = db.requests.find(r => r.id === requestId);
+                if (req) showRequestDetails(req);
+                else navigate('home');
+            } else {
+                const initialPage = window.location.hash.replace('#', '') || 'home';
+                navigate(initialPage);
+            }
         });
     </script>
 </body>
