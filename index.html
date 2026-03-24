@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Наставник Сочи — волонтёрство в образовании</title>
+    <title>Волонтерская помощь учителям</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
-        /* Стили */
+        /* Все стили из предыдущей версии (main.html) остаются без изменений */
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
             font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
@@ -54,13 +54,6 @@
         }
         .nav a:hover, .nav a.active, .nav button:hover {
             border-bottom-color: #ffb347;
-        }
-        .avatar-small {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            object-fit: cover;
-            border: 2px solid #ffb347;
         }
         .container {
             max-width: 1400px;
@@ -136,7 +129,7 @@
         }
         .request-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px,1fr));
+            grid-template-columns: 1fr;
             gap: 1.5rem;
         }
         .request-card {
@@ -321,6 +314,29 @@
         .review-stars {
             color: #ffb347;
             cursor: pointer;
+            font-size: 1.5rem;
+            letter-spacing: 4px;
+        }
+        .gallery {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin-top: 1rem;
+            justify-content: center;
+        }
+        .gallery-item {
+            width: calc(25% - 1rem);
+            min-width: 200px;
+            text-align: center;
+        }
+        .gallery-item img {
+            width: 100%;
+            border-radius: 16px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+        .gallery-item p {
+            margin-top: 0.5rem;
+            font-style: italic;
         }
         @media (max-width: 700px) {
             .app-header {
@@ -334,14 +350,17 @@
                 justify-content: center;
                 text-align: center;
             }
+            .gallery-item {
+                width: calc(50% - 1rem);
+            }
         }
     </style>
 </head>
 <body>
     <header class="app-header">
         <div class="logo">
-            <h1>🌱 Наставник Сочи</h1>
-            <span>волонтёрская помощь учителям</span>
+            <h1>🤝 Волонтерская помощь учителям</h1>
+            <span>Помогаем учителям дополнительного образования</span>
         </div>
         <div class="nav" id="mainNav"></div>
     </header>
@@ -349,47 +368,61 @@
     <div id="pageContent" class="container"></div>
 
     <div class="footer">
-        <p>🌊 Проект на конкурс «Первые шаги в цифровое будущее» — Сочи 2026</p>
+        <p>🌊 Проект для помощи педагогам ЦТРиГО в проведении мероприятий — Сочи 2026<br>Лицензионное соглашение: https://disk.yandex.ru/d/JhPuz2qU7W6fJA</p>
     </div>
 
     <div id="toastMessage" class="toast hidden"></div>
 
     <script>
-        // ========== КОНФИГУРАЦИЯ API ==========
-        const API_BASE = 'https://volonterstvo.cuzhima.workers.dev'; // URL сервера
+        // ========== КОНФИГУРАЦИЯ GIST ==========
+        const GIST_ID = '7e660241ea87b34a2d3e69f40a24ca33';
+        const GITHUB_TOKEN = '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';
+        const GITHUB_USERNAME = 'cuzhima';
 
-        // ========== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ==========
-        async function apiRequest(endpoint, options = {}) {
-            const response = await fetch(`${API_BASE}/${endpoint}`, {
-                ...options,
-                headers: { 'Content-Type': 'application/json', ...options.headers }
-            });
-            if (!response.ok) {
-                const error = await response.text();
-                throw new Error(error);
-            }
-            return response.json();
-        }
-
+        // ========== АСИНХРОННЫЕ ФУНКЦИИ РАБОТЫ С GIST ==========
         async function loadDB() {
-            return await apiRequest('data');
+            try {
+                const rawUrl = `https://gist.githubusercontent.com/${GITHUB_USERNAME}/${GIST_ID}/raw/data.txt`;
+                const response = await fetch(rawUrl);
+                if (!response.ok) throw new Error('Не удалось загрузить данные');
+                const content = await response.text();
+                if (!content) return { users: [], requests: [], messages: [], reviews: [] };
+                const data = JSON.parse(content);
+                return {
+                    users: data.users || [],
+                    requests: data.requests || [],
+                    messages: data.messages || [],
+                    reviews: data.reviews || []
+                };
+            } catch (e) {
+                console.warn('Ошибка загрузки, возвращаю пустую БД', e);
+                return { users: [], requests: [], messages: [], reviews: [] };
+            }
         }
 
         async function saveDB(db) {
-            return await apiRequest('data', {
-                method: 'POST',
-                body: JSON.stringify(db)
+            const content = JSON.stringify(db);
+            const url = `https://api.github.com/gists/${GIST_ID}`;
+            const response = await fetch(url, {
+                method: 'PATCH',
+                headers: {
+                    Authorization: `token ${GITHUB_TOKEN}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    files: {
+                        'data.txt': { content }
+                    }
+                })
             });
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`Ошибка сохранения: ${response.status} - ${errorText}`);
+            }
+            return true;
         }
 
-        async function sendEmail(emailData) {
-            return await apiRequest('send-email', {
-                method: 'POST',
-                body: JSON.stringify(emailData)
-            });
-        }
-
-        // ========== ХЭШИРОВАНИЕ ПАРОЛЯ (на клиенте) ==========
+        // ========== ХЭШИРОВАНИЕ ПАРОЛЯ ==========
         async function hashPassword(password, salt) {
             const enc = new TextEncoder();
             const keyMaterial = await crypto.subtle.importKey('raw', enc.encode(password), { name: 'PBKDF2' }, false, ['deriveBits']);
@@ -411,7 +444,7 @@
             return crypto.getRandomValues(new Uint8Array(16)).join('');
         }
 
-        // ========== УПРАВЛЕНИЕ ПОЛЬЗОВАТЕЛЕМ ==========
+        // ========== ПОЛЬЗОВАТЕЛЬ ==========
         let currentUser = null;
 
         function setCurrentUser(user) {
@@ -442,40 +475,45 @@
             const db = await loadDB();
             if (!db.users.some(u => u.role === 'admin')) {
                 const salt = generateSalt();
-                const adminHash = await hashPassword('admin123', salt);
+                const adminHash = await hashPassword('ADMIN_admin_123!', salt);
                 db.users.push({
                     id: 'admin_' + Date.now(),
                     username: 'admin',
                     passwordSalt: salt,
                     passwordHash: adminHash,
-                    name: 'Администратор',
+                    fullName: 'Администратор',
                     role: 'admin',
                     approved: true,
                     email: '',
                     contact: '',
                     bio: '',
+                    position: '',
+                    publicData: true,
                     avatar: null
                 });
                 await saveDB(db);
-                console.log('Администратор создан (логин: admin, пароль: admin123)');
+                console.log('Администратор создан (логин: admin, пароль: ADMIN_admin_123!)');
             }
         }
 
-        // ========== НАВИГАЦИЯ ==========
         function updateNav() {
             const nav = document.getElementById('mainNav');
             if (currentUser) {
                 let adminLink = '';
                 let chatsLink = '';
-                if (currentUser.role === 'admin') adminLink = '<a href="#" data-page="admin">⚙️ Админка</a>';
-                if (currentUser.role === 'student') chatsLink = '<a href="#" data-page="chats">💬 Чаты</a>';
-                if (currentUser.role === 'teacher') chatsLink = '<a href="#" data-page="chats">💬 Чаты</a>';
+                let archiveLink = '';
+                if (currentUser.role === 'admin') adminLink = '<a href="#" data-page="admin">⚙️ Админ-панель</a>';
+                if (currentUser.role === 'student' || currentUser.role === 'teacher') {
+                    chatsLink = '<a href="#" data-page="chats">💬 Чаты</a>';
+                    archiveLink = '<a href="#" data-page="archive">📦 Архив</a>';
+                }
                 nav.innerHTML = `
                     <a href="#" data-page="home">Главная</a>
                     ${currentUser.role === 'teacher' && currentUser.approved ? '<a href="#" data-page="create">➕ Создать заявку</a>' : ''}
                     ${adminLink}
                     ${chatsLink}
-                    <a href="#" data-page="profile">👤 ${currentUser.name}</a>
+                    ${archiveLink}
+                    <a href="#" data-page="profile">👤 ${currentUser.fullName}</a>
                     <button data-page="logout">Выйти</button>
                 `;
             } else {
@@ -508,7 +546,8 @@
         const helpTypes = [
             { value: 'substitute', label: 'Замещение учителя' },
             { value: 'assist', label: 'Помощь учителю' },
-            { value: 'event', label: 'Помощь в мероприятии' }
+            { value: 'event', label: 'Помощь в мероприятии' },
+            { value: 'other', label: 'Другое' }
         ];
         const rewards = ['Еда', 'Ничего', 'Другое'];
 
@@ -521,7 +560,17 @@
             setTimeout(() => toast.classList.add('hidden'), 3000);
         }
 
-        // ========== ОТРИСОВКА ГЛАВНОЙ ==========
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/[&<>]/g, function(m) {
+                if (m === '&') return '&amp;';
+                if (m === '<') return '&lt;';
+                if (m === '>') return '&gt;';
+                return m;
+            });
+        }
+
+        // ========== ГЛАВНАЯ ==========
         async function renderHome() {
             const db = await loadDB();
             currentRequests = db.requests || [];
@@ -564,7 +613,7 @@
                         <button class="btn-outline btn" id="resetFiltersBtn">Сброс</button>
                     </div>
                     <div class="requests-panel">
-                        <h2>📋 Заявки (<span id="requestsCount">${currentRequests.length}</span>)</h2>
+                        <h2>📋 Активные заявки (<span id="requestsCount">${currentRequests.filter(r=>r.status!=='completed').length}</span>)</h2>
                         <div id="map"></div>
                         <div id="requestsList" class="request-grid" style="margin-top:2rem;"></div>
                     </div>
@@ -606,7 +655,7 @@
 
         function applyFiltersToRequests() {
             updateFiltersFromInputs();
-            const filtered = currentRequests.filter(req => {
+            const filtered = currentRequests.filter(req => req.status !== 'completed').filter(req => {
                 if (filters.search && !req.title.toLowerCase().includes(filters.search.toLowerCase()) && !req.description.toLowerCase().includes(filters.search.toLowerCase())) return false;
                 if (filters.district && req.district !== filters.district) return false;
                 if (filters.dateFrom && req.dateTime < filters.dateFrom) return false;
@@ -628,33 +677,39 @@
         function renderRequestsList(requests) {
             const listDiv = document.getElementById('requestsList');
             if (requests.length === 0) {
-                listDiv.innerHTML = '<p style="grid-column:1/-1; text-align:center;">😕 Нет заявок по фильтрам</p>';
+                listDiv.innerHTML = '<p style="grid-column:1/-1; text-align:center;">😕 Нет активных заявок</p>';
                 return;
             }
             listDiv.innerHTML = requests.map(req => {
-                const teacher = currentUsers.find(u => u.id === req.userId) || { name: req.teacherName, avatar: null, contact: req.teacherContact };
+                const teacher = currentUsers.find(u => u.id === req.userId) || { fullName: req.teacherName, avatar: null, contact: req.teacherContact, publicData: true };
                 const slotsLeft = req.slots - (req.booked ? req.booked.length : 0);
                 return `
                 <div class="request-card" data-id="${req.id}">
                     <button class="share-btn" data-id="${req.id}" title="Поделиться"><i class="fas fa-share-alt"></i></button>
                     <img src="${teacher.avatar || 'https://via.placeholder.com/60?text=+'}" class="avatar-medium" alt="avatar">
                     <div class="request-content">
-                        <div class="request-title">${req.title}</div>
+                        <div class="request-title">${escapeHtml(req.title)}</div>
                         <div class="request-meta">
                             <span class="badge">${req.district}</span>
                             <span class="badge">${new Date(req.dateTime).toLocaleDateString('ru-RU')}</span>
-                            <span class="badge">${helpTypes.find(t => t.value === req.helpType)?.label || req.helpType}</span>
-                            <span class="badge">🎁 ${req.reward}</span>
+                            <span class="badge">${helpTypes.find(t => t.value === req.helpType)?.label || req.helpType} ${req.helpTypeOther ? '('+escapeHtml(req.helpTypeOther)+')' : ''}</span>
+                            <span class="badge">🎁 ${req.reward} ${req.rewardOther ? '('+escapeHtml(req.rewardOther)+')' : ''}</span>
+                            <span class="badge">⏱ ${req.duration} ч</span>
                             <span class="badge">👥 Свободно: ${slotsLeft}/${req.slots}</span>
                         </div>
-                        <p>${req.description.substring(0,80)}…</p>
-                        <div class="contact-chip">👤 ${teacher.name} · ☎️ ${teacher.contact}</div>
+                        <p>${escapeHtml(req.description)}</p>
+                        <div class="contact-chip">
+                            👤 ${teacher.fullName} · 
+                            ${teacher.publicData ? '☎️ '+escapeHtml(teacher.contact) : '📞 Контакты скрыты'}
+                        </div>
+                        <button class="btn-outline btn chat-before" data-id="${req.id}" style="margin-top:8px;">💬 Написать организатору</button>
                     </div>
                 </div>
             `}).join('');
             document.querySelectorAll('.request-card').forEach(card => {
                 card.addEventListener('click', (e) => {
                     if (e.target.closest('.share-btn')) return;
+                    if (e.target.closest('.chat-before')) return;
                     const id = card.dataset.id;
                     const req = requests.find(r => r.id == id);
                     showRequestDetails(req);
@@ -667,12 +722,48 @@
                     navigator.clipboard.writeText(url);
                     showToast('Ссылка скопирована!');
                 });
+                card.querySelectorAll('.chat-before').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        const id = btn.dataset.id;
+                        const req = requests.find(r => r.id == id);
+                        startChatWithOrganizer(req);
+                    });
+                });
             });
         }
 
+        async function startChatWithOrganizer(req) {
+            if (!currentUser) {
+                showToast('Войдите, чтобы начать чат!');
+                navigate('login');
+                return;
+            }
+            const otherUserId = req.userId;
+            if (otherUserId === currentUser.id) {
+                showToast('Это ваша заявка, вы не можете написать себе!');
+                return;
+            }
+            await renderChatWindow(req.id, otherUserId);
+        }
+
+        function updateMapMarkers(requests) {
+            markersLayer.clearLayers();
+            requests.forEach(req => {
+                if (req.lat && req.lng) {
+                    const teacher = currentUsers.find(u => u.id === req.userId) || { fullName: req.teacherName };
+                    const marker = L.marker([req.lat, req.lng]).bindPopup(`
+                        <b>${escapeHtml(req.title)}</b><br>${escapeHtml(req.address)}<br>👤 ${escapeHtml(teacher.fullName)}<br>📞 ${teacher.publicData ? escapeHtml(req.teacherContact) : 'скрыт'}
+                    `);
+                    markersLayer.addLayer(marker);
+                }
+            });
+        }
+
+        // ========== ДЕТАЛИ ЗАЯВКИ ==========
         async function showRequestDetails(req) {
             const db = await loadDB();
-            const teacher = db.users.find(u => u.id === req.userId) || { name: req.teacherName, contact: req.teacherContact, bio: '', email: '' };
+            const teacher = db.users.find(u => u.id === req.userId) || { fullName: req.teacherName, contact: req.teacherContact, bio: '', email: '', publicData: true };
             const isVolunteer = currentUser && currentUser.role === 'student';
             const hasBooked = currentUser && req.booked && req.booked.some(b => b.userId === currentUser.id);
             const slotsLeft = req.slots - (req.booked ? req.booked.length : 0);
@@ -686,21 +777,22 @@
 
             const content = `
                 <div class="card" style="max-width:800px; margin:0 auto;">
-                    <h2>${req.title}</h2>
-                    <p><strong>Учитель:</strong> ${teacher.name} (${teacher.contact})</p>
-                    <p><strong>Описание:</strong> ${req.description}</p>
-                    <p><strong>Адрес:</strong> ${req.address}</p>
+                    <h2>${escapeHtml(req.title)}</h2>
+                    <p><strong>Организатор:</strong> ${escapeHtml(teacher.fullName)}${teacher.position ? ' ('+escapeHtml(teacher.position)+')' : ''}</p>
+                    <p><strong>Описание:</strong> ${escapeHtml(req.description)}</p>
+                    <p><strong>Адрес:</strong> ${escapeHtml(req.address)}</p>
                     <p><strong>Дата:</strong> ${new Date(req.dateTime).toLocaleString('ru-RU')}</p>
-                    <p><strong>Вид помощи:</strong> ${helpTypes.find(t => t.value === req.helpType)?.label}</p>
-                    <p><strong>Поощрение:</strong> ${req.reward}</p>
+                    <p><strong>Длительность:</strong> ${req.duration} ч</p>
+                    <p><strong>Вид помощи:</strong> ${helpTypes.find(t => t.value === req.helpType)?.label} ${req.helpTypeOther ? '('+escapeHtml(req.helpTypeOther)+')' : ''}</p>
+                    <p><strong>Поощрение:</strong> ${req.reward} ${req.rewardOther ? '('+escapeHtml(req.rewardOther)+')' : ''}</p>
                     <p><strong>Свободно мест:</strong> ${slotsLeft} из ${req.slots}</p>
                     <p><strong>Статус:</strong> ${req.status === 'active' ? 'Активна' : 'Завершена'}</p>
-                    <p><strong>Рейтинг:</strong> ${avgRating} (${reviews.length} отзывов)</p>
+                    <p><strong>Рейтинг мероприятия:</strong> ${avgRating} (${reviews.length} отзывов)</p>
                     <div class="reviews">
                         <h3>Отзывы</h3>
                         ${reviews.map(r => {
                             const user = db.users.find(u => u.id === r.userId);
-                            return `<div><strong>${user?.name || 'Аноним'}</strong> (${'★'.repeat(r.rating)}${'☆'.repeat(5-r.rating)}): ${r.text}</div>`;
+                            return `<div><strong>${escapeHtml(user?.fullName || 'Аноним')}</strong> (${'★'.repeat(r.rating)}${'☆'.repeat(5-r.rating)}): ${escapeHtml(r.text)}</div>`;
                         }).join('') || '<p>Нет отзывов</p>'}
                     </div>
                     ${canBook ? `<button id="bookBtn" class="btn">📌 Забронировать слот</button>` : ''}
@@ -746,21 +838,13 @@
         async function bookSlot(requestId) {
             const db = await loadDB();
             const req = db.requests.find(r => r.id === requestId);
-            if (!req || req.status !== 'active') { showToast('Заявка недоступна'); return; }
+            if (!req || req.status !== 'active') { showToast('Заявка недоступна!'); return; }
             const slotsLeft = req.slots - (req.booked ? req.booked.length : 0);
-            if (slotsLeft <= 0) { showToast('Нет свободных мест'); return; }
+            if (slotsLeft <= 0) { showToast('Нет свободных мест!'); return; }
             if (!req.booked) req.booked = [];
             req.booked.push({ userId: currentUser.id, bookedAt: new Date().toISOString() });
             await saveDB(db);
             showToast('Слот забронирован!');
-            const teacher = db.users.find(u => u.id === req.userId);
-            if (teacher && teacher.email) {
-                await sendEmail({
-                    to: teacher.email,
-                    subject: 'Новое бронирование',
-                    message: `Ученик ${currentUser.name} забронировал слот на ваше мероприятие "${req.title}".`
-                });
-            }
         }
 
         async function cancelBooking(requestId) {
@@ -769,15 +853,7 @@
             if (req && req.booked) {
                 req.booked = req.booked.filter(b => b.userId !== currentUser.id);
                 await saveDB(db);
-                showToast('Бронь отменена');
-                const teacher = db.users.find(u => u.id === req.userId);
-                if (teacher && teacher.email) {
-                    await sendEmail({
-                        to: teacher.email,
-                        subject: 'Отмена бронирования',
-                        message: `Ученик ${currentUser.name} отменил бронь на "${req.title}".`
-                    });
-                }
+                showToast('Бронь отменена!');
             }
         }
 
@@ -787,15 +863,18 @@
             if (req) {
                 req.status = 'completed';
                 await saveDB(db);
-                showToast('Мероприятие завершено, теперь волонтёры могут оставить отзывы');
+                showToast('Мероприятие завершено. Волонтёры смогут оставить свои отзывы. Спасибо за использование нашего сервиса!');
             }
         }
 
         async function addReview(requestId, rating, text) {
             const db = await loadDB();
+            const req = db.requests.find(r => r.id === requestId);
+            if (!req) return;
             db.reviews.push({
                 id: Date.now() + '-' + Math.random(),
                 requestId,
+                teacherId: req.userId,
                 userId: currentUser.id,
                 rating,
                 text,
@@ -805,23 +884,10 @@
             showToast('Спасибо за отзыв!');
         }
 
-        function updateMapMarkers(requests) {
-            markersLayer.clearLayers();
-            requests.forEach(req => {
-                if (req.lat && req.lng) {
-                    const teacher = currentUsers.find(u => u.id === req.userId) || { name: req.teacherName };
-                    const marker = L.marker([req.lat, req.lng]).bindPopup(`
-                        <b>${req.title}</b><br>${req.address}<br>👤 ${teacher.name}<br>📞 ${req.teacherContact}
-                    `);
-                    markersLayer.addLayer(marker);
-                }
-            });
-        }
-
         // ========== СОЗДАНИЕ ЗАЯВКИ ==========
         async function renderCreate() {
             if (!currentUser || currentUser.role !== 'teacher' || !currentUser.approved) {
-                showToast('Только одобренные учителя могут создавать заявки');
+                showToast('Только одобренные учителя могут создавать заявки!');
                 return navigate('home');
             }
             const container = document.getElementById('pageContent');
@@ -831,66 +897,176 @@
                     <form id="createRequestForm">
                         <div class="form-group"><label>Название*</label><input class="form-control" id="title" required></div>
                         <div class="form-group"><label>Описание*</label><textarea class="form-control" id="description" rows="3" required></textarea></div>
-                        <div class="form-group"><label>Адрес*</label><div class="district-selector"><input class="form-control" id="address" placeholder="ул. Ленина, 1" required><select id="district" class="form-control" required>${districts.map(d => `<option value="${d}">${d}</option>`).join('')}</select></div><button type="button" class="btn-outline btn" id="geocodeBtn">Найти на карте</button><div id="mapPick" style="height:250px; margin-top:1rem;"></div><input type="hidden" id="lat"><input type="hidden" id="lng"></div>
+                        <div class="form-group"><label>Адрес*</label>
+                            <select id="addressSelect" class="form-control">
+                                <option value="">-- Выберите локацию --</option>
+                                <option value="МБУ ДО ЦТРиГО, ул. Красноармейская, 30, Центральный район">МБУ ДО ЦТРиГО (ул. Красноармейская, 30)</option>
+                                <option value="IT-КУБ, ул. Горького, 44, Центральный район">IT-КУБ (ул. Горького, 44)</option>
+                                <option value="other">Другое (выбрать на карте)</option>
+                            </select>
+                            <div id="customAddressDiv" style="display:none; margin-top:10px;">
+                                <input class="form-control" id="customAddress" placeholder="Введите адрес вручную">
+                                <button type="button" id="geocodeBtn" class="btn-outline btn" style="margin-top:5px;">Найти на карте</button>
+                                <div id="mapPick" style="height:250px; margin-top:10px;"></div>
+                                <input type="hidden" id="lat">
+                                <input type="hidden" id="lng">
+                            </div>
+                            <input type="hidden" id="district" value="">
+                        </div>
                         <div class="form-group"><label>Дата и время*</label><input type="datetime-local" class="form-control" id="dateTime" required></div>
+                        <div class="form-group"><label>Длительность (часы)*</label><input type="number" class="form-control" id="duration" step="0.5" min="0.5" required></div>
                         <div class="form-group"><label>Количество мест*</label><input type="number" class="form-control" id="slots" min="1" value="1" required></div>
-                        <div class="form-group"><label>Поощрение</label><select id="reward" class="form-control">${rewards.map(r => `<option value="${r}">${r}</option>`).join('')}</select></div>
-                        <div class="form-group"><label>Вид помощи*</label><div class="radio-group">${helpTypes.map(t => `<label><input type="radio" name="helpType" value="${t.value}" required> ${t.label}</label>`).join('')}</div></div>
+                        <div class="form-group"><label>Вид помощи*</label>
+                            <div class="radio-group" id="helpTypeGroup">
+                                ${helpTypes.map(t => `<label><input type="radio" name="helpType" value="${t.value}" required> ${t.label}</label>`).join('')}
+                            </div>
+                            <div id="helpTypeOtherDiv" style="display:none; margin-top:5px;"><input class="form-control" id="helpTypeOther" placeholder="Укажите вид помощи"></div>
+                        </div>
+                        <div class="form-group"><label>Поощрение</label>
+                            <div class="radio-group" id="rewardGroup">
+                                ${rewards.map(r => `<label><input type="radio" name="reward" value="${r}" required> ${r}</label>`).join('')}
+                            </div>
+                            <div id="rewardOtherDiv" style="display:none; margin-top:5px;"><input class="form-control" id="rewardOther" placeholder="Укажите поощрение"></div>
+                        </div>
                         <button type="submit" class="btn">Опубликовать</button>
                     </form>
                 </div>
             `;
-            const mapPick = L.map('mapPick').setView([43.6, 39.73], 13);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(mapPick);
-            let marker = null;
-            mapPick.on('click', (e) => {
-                if (marker) mapPick.removeLayer(marker);
-                marker = L.marker(e.latlng).addTo(mapPick);
-                document.getElementById('lat').value = e.latlng.lat;
-                document.getElementById('lng').value = e.latlng.lng;
-                fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${e.latlng.lat}&lon=${e.latlng.lng}&accept-language=ru`)
-                    .then(res => res.json())
-                    .then(data => { if (data.display_name) document.getElementById('address').value = data.display_name; });
+            // Логика выбора адреса
+            const addrSelect = document.getElementById('addressSelect');
+            const customDiv = document.getElementById('customAddressDiv');
+            const districtField = document.getElementById('district');
+            addrSelect.addEventListener('change', () => {
+                if (addrSelect.value === 'other') {
+                    customDiv.style.display = 'block';
+                    districtField.value = '';
+                    initMapPick();
+                } else if (addrSelect.value) {
+                    customDiv.style.display = 'none';
+                    if (addrSelect.value.includes('Центральный')) districtField.value = 'Центральный';
+                    else districtField.value = '';
+                    geocodeAddress(addrSelect.value);
+                } else {
+                    customDiv.style.display = 'none';
+                    districtField.value = '';
+                }
             });
-            document.getElementById('geocodeBtn').addEventListener('click', () => {
-                const addr = document.getElementById('address').value;
-                if (!addr) return;
-                fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(addr + ', Сочи')}&limit=1`)
+            // Вид помощи "Другое"
+            const helpTypeRadios = document.querySelectorAll('input[name="helpType"]');
+            const helpTypeOtherDiv = document.getElementById('helpTypeOtherDiv');
+            helpTypeRadios.forEach(radio => {
+                radio.addEventListener('change', () => {
+                    if (radio.value === 'other') helpTypeOtherDiv.style.display = 'block';
+                    else helpTypeOtherDiv.style.display = 'none';
+                });
+            });
+            // Поощрение "Другое"
+            const rewardRadios = document.querySelectorAll('input[name="reward"]');
+            const rewardOtherDiv = document.getElementById('rewardOtherDiv');
+            rewardRadios.forEach(radio => {
+                radio.addEventListener('change', () => {
+                    if (radio.value === 'Другое') rewardOtherDiv.style.display = 'block';
+                    else rewardOtherDiv.style.display = 'none';
+                });
+            });
+            let mapPick, marker;
+            function initMapPick() {
+                if (mapPick) mapPick.remove();
+                mapPick = L.map('mapPick').setView([43.6, 39.73], 13);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(mapPick);
+                marker = null;
+                mapPick.on('click', (e) => {
+                    if (marker) mapPick.removeLayer(marker);
+                    marker = L.marker(e.latlng).addTo(mapPick);
+                    document.getElementById('lat').value = e.latlng.lat;
+                    document.getElementById('lng').value = e.latlng.lng;
+                    fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${e.latlng.lat}&lon=${e.latlng.lng}&accept-language=ru`)
+                        .then(res => res.json())
+                        .then(data => {
+                            if (data.display_name) document.getElementById('customAddress').value = data.display_name;
+                            const parts = data.display_name.split(',');
+                            const found = districts.find(d => parts.join(',').includes(d));
+                            if (found) districtField.value = found;
+                        });
+                });
+                document.getElementById('geocodeBtn').addEventListener('click', () => {
+                    const addr = document.getElementById('customAddress').value;
+                    if (!addr) return;
+                    fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(addr + ', Сочи')}&limit=1`)
+                        .then(res => res.json())
+                        .then(data => {
+                            if (data.length) {
+                                const lat = parseFloat(data[0].lat);
+                                const lon = parseFloat(data[0].lon);
+                                mapPick.setView([lat, lon], 16);
+                                if (marker) mapPick.removeLayer(marker);
+                                marker = L.marker([lat, lon]).addTo(mapPick);
+                                document.getElementById('lat').value = lat;
+                                document.getElementById('lng').value = lon;
+                                const parts = data[0].display_name.split(',');
+                                const found = districts.find(d => parts.join(',').includes(d));
+                                if (found) districtField.value = found;
+                            } else alert('Адрес не найден');
+                        });
+                });
+            }
+            function geocodeAddress(address) {
+                fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&limit=1`)
                     .then(res => res.json())
                     .then(data => {
                         if (data.length) {
                             const lat = parseFloat(data[0].lat);
                             const lon = parseFloat(data[0].lon);
-                            mapPick.setView([lat, lon], 16);
-                            if (marker) mapPick.removeLayer(marker);
-                            marker = L.marker([lat, lon]).addTo(mapPick);
                             document.getElementById('lat').value = lat;
                             document.getElementById('lng').value = lon;
-                        } else alert('Адрес не найден');
+                        }
                     });
-            });
+            }
             document.getElementById('createRequestForm').addEventListener('submit', async (e) => {
                 e.preventDefault();
+                let address = '', district = '', lat = null, lng = null;
+                const addrSelectVal = document.getElementById('addressSelect').value;
+                if (addrSelectVal === 'other') {
+                    address = document.getElementById('customAddress').value;
+                    district = document.getElementById('district').value;
+                    lat = parseFloat(document.getElementById('lat').value) || null;
+                    lng = parseFloat(document.getElementById('lng').value) || null;
+                    if (!address) { alert('Введите адрес'); return; }
+                } else {
+                    address = addrSelectVal;
+                    district = addrSelectVal.includes('Центральный') ? 'Центральный' : '';
+                    lat = parseFloat(document.getElementById('lat').value) || null;
+                    lng = parseFloat(document.getElementById('lng').value) || null;
+                }
+                const helpType = document.querySelector('input[name="helpType"]:checked')?.value;
+                let helpTypeOther = '';
+                if (helpType === 'other') helpTypeOther = document.getElementById('helpTypeOther').value;
+                const reward = document.querySelector('input[name="reward"]:checked')?.value;
+                let rewardOther = '';
+                if (reward === 'Другое') rewardOther = document.getElementById('rewardOther').value;
                 const newReq = {
                     id: Date.now() + '-' + Math.random().toString(36).substr(2, 6),
                     userId: currentUser.id,
                     title: document.getElementById('title').value,
                     description: document.getElementById('description').value,
-                    teacherName: currentUser.name,
+                    teacherName: currentUser.fullName,
                     teacherContact: currentUser.contact,
-                    address: document.getElementById('address').value,
-                    district: document.getElementById('district').value,
-                    lat: parseFloat(document.getElementById('lat').value) || null,
-                    lng: parseFloat(document.getElementById('lng').value) || null,
+                    address,
+                    district,
+                    lat,
+                    lng,
                     dateTime: document.getElementById('dateTime').value,
+                    duration: parseFloat(document.getElementById('duration').value),
                     slots: parseInt(document.getElementById('slots').value),
                     booked: [],
-                    reward: document.getElementById('reward').value,
-                    helpType: document.querySelector('input[name="helpType"]:checked')?.value,
+                    reward,
+                    rewardOther,
+                    helpType,
+                    helpTypeOther,
                     status: 'active',
                     createdAt: new Date().toISOString()
                 };
-                if (!newReq.helpType) { alert('Выберите вид помощи'); return; }
+                if (!helpType) { alert('Выберите вид помощи'); return; }
                 if (!newReq.lat || !newReq.lng) { alert('Укажите местоположение на карте'); return; }
                 const db = await loadDB();
                 db.requests.push(newReq);
@@ -907,20 +1083,33 @@
             const container = document.getElementById('pageContent');
             let calendarHtml = '';
             if (currentUser.role === 'student') {
-                const myBookings = db.requests.filter(r => r.booked && r.booked.some(b => b.userId === currentUser.id));
+                const myBookings = db.requests.filter(r => r.booked && r.booked.some(b => b.userId === currentUser.id) && r.status !== 'completed');
                 calendarHtml = `
-                    <h3>📅 Мой календарь мероприятий</h3>
+                    <h3>📅 Мой календарь предстоящих мероприятий</h3>
                     <div class="calendar-grid">
                         ${myBookings.map(r => `
                             <div class="calendar-item">
-                                <strong>${r.title}</strong><br>
+                                <strong>${escapeHtml(r.title)}</strong><br>
                                 📅 ${new Date(r.dateTime).toLocaleString('ru-RU')}<br>
-                                📍 ${r.address}<br>
-                                👩‍🏫 ${r.teacherName}<br>
+                                📍 ${escapeHtml(r.address)}<br>
+                                👩‍🏫 ${escapeHtml(r.teacherName)}<br>
                                 <button class="btn-outline btn" data-id="${r.id}">Подробнее</button>
                             </div>
                         `).join('') || '<p>Нет запланированных мероприятий</p>'}
                     </div>
+                `;
+            }
+            // Отзывы учителю
+            let reviewsHtml = '';
+            if (currentUser.role === 'teacher') {
+                const teacherReviews = db.reviews.filter(r => r.teacherId === currentUser.id);
+                reviewsHtml = `
+                    <hr><h3>📝 Отзывы о моих мероприятиях</h3>
+                    ${teacherReviews.map(r => {
+                        const student = db.users.find(u => u.id === r.userId);
+                        const req = db.requests.find(req => req.id === r.requestId);
+                        return `<div style="border-left:3px solid #ffb347; margin-bottom:10px; padding-left:10px;"><strong>${escapeHtml(student?.fullName || 'Ученик')}</strong> (${'★'.repeat(r.rating)}${'☆'.repeat(5-r.rating)})<br>${escapeHtml(r.text)}<br><small>Мероприятие: ${escapeHtml(req?.title || '')}</small></div>`;
+                    }).join('') || '<p>Пока нет отзывов</p>'}
                 `;
             }
             container.innerHTML = `
@@ -929,35 +1118,42 @@
                     <div class="profile-header">
                         <img src="${currentUser.avatar || 'https://via.placeholder.com/120?text=Фото'}" class="avatar-large" id="profileAvatar">
                         <div>
-                            <p><strong>Имя:</strong> ${currentUser.name}</p>
+                            <p><strong>ФИО:</strong> ${escapeHtml(currentUser.fullName)}</p>
+                            <p><strong>Должность:</strong> ${escapeHtml(currentUser.position || 'не указана')}</p>
                             <p><strong>Роль:</strong> ${currentUser.role === 'teacher' ? 'Учитель' : (currentUser.role === 'admin' ? 'Администратор' : 'Ученик')}</p>
-                            <p><strong>Email:</strong> ${currentUser.email || 'не указан'}</p>
-                            <p><strong>Контакт:</strong> ${currentUser.contact || 'не указан'}</p>
-                            <p><strong>О себе:</strong> ${currentUser.bio || 'не заполнено'}</p>
+                            <p><strong>Email:</strong> ${escapeHtml(currentUser.email || 'не указан')}</p>
+                            <p><strong>Контакт:</strong> ${escapeHtml(currentUser.contact || 'не указан')}</p>
+                            <p><strong>О себе:</strong> ${escapeHtml(currentUser.bio || 'не заполнено')}</p>
+                            <p><strong>Показывать контакты:</strong> ${currentUser.publicData ? '✅ Да' : '❌ Нет'}</p>
                             ${currentUser.role === 'teacher' ? `<p><strong>Статус:</strong> ${currentUser.approved ? '✅ Подтверждён' : '⏳ Ожидает подтверждения'}</p>` : ''}
                         </div>
                     </div>
                     <hr>
                     <h3>Редактировать профиль</h3>
                     <form id="profileForm">
-                        <div class="form-group"><label>Имя</label><input class="form-control" id="editName" value="${currentUser.name}" required></div>
-                        <div class="form-group"><label>Email (для уведомлений)</label><input type="email" class="form-control" id="editEmail" value="${currentUser.email || ''}"></div>
-                        <div class="form-group"><label>Контакт</label><input class="form-control" id="editContact" value="${currentUser.contact || ''}"></div>
-                        <div class="form-group"><label>О себе</label><textarea class="form-control" id="editBio" rows="3">${currentUser.bio || ''}</textarea></div>
+                        <div class="form-group"><label>ФИО*</label><input class="form-control" id="editFullName" value="${escapeHtml(currentUser.fullName)}" required></div>
+                        <div class="form-group"><label>Должность</label><input class="form-control" id="editPosition" value="${escapeHtml(currentUser.position || '')}"></div>
+                        <div class="form-group"><label>Email (для связи)</label><input type="email" class="form-control" id="editEmail" value="${escapeHtml(currentUser.email || '')}"></div>
+                        <div class="form-group"><label>Контакт (телефон)</label><input class="form-control" id="editContact" value="${escapeHtml(currentUser.contact || '')}"></div>
+                        <div class="form-group"><label>О себе</label><textarea class="form-control" id="editBio" rows="3">${escapeHtml(currentUser.bio || '')}</textarea></div>
+                        <div class="form-group"><label>Показывать контакты в заявках</label><input type="checkbox" id="editPublicData" ${currentUser.publicData ? 'checked' : ''}></div>
                         <div class="form-group"><label>Аватар</label><input type="file" id="avatarInput" accept="image/*"><small>Сжатие до 64x64</small></div>
                         <button type="submit" class="btn">Сохранить</button>
                     </form>
                     ${calendarHtml}
+                    ${reviewsHtml}
                 </div>
             `;
             document.getElementById('avatarInput').addEventListener('change', handleAvatarUpload);
             document.getElementById('profileForm').addEventListener('submit', async (e) => {
                 e.preventDefault();
                 const updated = { ...currentUser,
-                    name: document.getElementById('editName').value,
+                    fullName: document.getElementById('editFullName').value,
+                    position: document.getElementById('editPosition').value,
                     email: document.getElementById('editEmail').value,
                     contact: document.getElementById('editContact').value,
                     bio: document.getElementById('editBio').value,
+                    publicData: document.getElementById('editPublicData').checked,
                 };
                 const db = await loadDB();
                 const index = db.users.findIndex(u => u.id === currentUser.id);
@@ -1002,50 +1198,87 @@
         async function renderChats() {
             if (!currentUser) { navigate('login'); return; }
             const db = await loadDB();
-            let relevantRequests = [];
+            let chats = [];
             if (currentUser.role === 'teacher') {
-                relevantRequests = db.requests.filter(r => r.userId === currentUser.id);
+                const myRequests = db.requests.filter(r => r.userId === currentUser.id);
+                for (const req of myRequests) {
+                    if (req.booked) {
+                        for (const b of req.booked) {
+                            const volunteer = db.users.find(u => u.id === b.userId);
+                            if (volunteer) {
+                                chats.push({
+                                    requestId: req.id,
+                                    requestTitle: req.title,
+                                    otherUserId: volunteer.id,
+                                    otherName: volunteer.fullName,
+                                    otherRole: volunteer.role
+                                });
+                            }
+                        }
+                    }
+                }
             } else if (currentUser.role === 'student') {
-                relevantRequests = db.requests.filter(r => r.booked && r.booked.some(b => b.userId === currentUser.id));
+                const myBookings = db.requests.filter(r => r.booked && r.booked.some(b => b.userId === currentUser.id));
+                for (const req of myBookings) {
+                    const teacher = db.users.find(u => u.id === req.userId);
+                    if (teacher) {
+                        chats.push({
+                            requestId: req.id,
+                            requestTitle: req.title,
+                            otherUserId: teacher.id,
+                            otherName: teacher.fullName,
+                            otherRole: teacher.role
+                        });
+                    }
+                }
+            }
+            const unique = [];
+            const keys = new Set();
+            for (const c of chats) {
+                const key = c.requestId + '_' + c.otherUserId;
+                if (!keys.has(key)) {
+                    keys.add(key);
+                    unique.push(c);
+                }
             }
             const container = document.getElementById('pageContent');
             container.innerHTML = `
                 <div class="card">
-                    <h2>💬 Чаты по заявкам</h2>
+                    <h2>💬 Чаты</h2>
                     <div id="chatsList">
-                        ${relevantRequests.map(req => `
-                            <div class="admin-item" data-id="${req.id}">
-                                <div><strong>${req.title}</strong> (${new Date(req.dateTime).toLocaleDateString()})</div>
-                                <button class="btn openChatBtn" data-id="${req.id}">Открыть чат</button>
+                        ${unique.map(c => `
+                            <div class="admin-item" data-request="${c.requestId}" data-user="${c.otherUserId}">
+                                <div><strong>${escapeHtml(c.requestTitle)}</strong><br>Собеседник: ${escapeHtml(c.otherName)} (${c.otherRole === 'teacher' ? 'Учитель' : 'Ученик'})</div>
+                                <button class="btn openChatBtn" data-request="${c.requestId}" data-user="${c.otherUserId}">Открыть чат</button>
                             </div>
-                        `).join('') || '<p>Нет доступных чатов</p>'}
+                        `).join('') || '<p>Нет чатов</p>'}
                     </div>
                 </div>
             `;
             document.querySelectorAll('.openChatBtn').forEach(btn => {
-                btn.addEventListener('click', async () => {
-                    const requestId = btn.dataset.id;
-                    await renderChatWindow(requestId);
+                btn.addEventListener('click', () => {
+                    const requestId = btn.dataset.request;
+                    const otherUserId = btn.dataset.user;
+                    renderChatWindow(requestId, otherUserId);
                 });
             });
         }
 
-        async function renderChatWindow(requestId) {
+        async function renderChatWindow(requestId, otherUserId) {
             const db = await loadDB();
             const req = db.requests.find(r => r.id === requestId);
             if (!req) return;
-            const otherUserId = (currentUser.id === req.userId) ? (req.booked && req.booked[0]?.userId) : req.userId;
-            if (!otherUserId) { showToast('Нет собеседника'); return; }
             const messages = db.messages.filter(m => m.requestId === requestId && ((m.fromUserId === currentUser.id && m.toUserId === otherUserId) || (m.fromUserId === otherUserId && m.toUserId === currentUser.id)));
             messages.sort((a,b) => a.timestamp - b.timestamp);
+            const otherUser = db.users.find(u => u.id === otherUserId);
             const container = document.getElementById('pageContent');
             container.innerHTML = `
                 <div class="card">
-                    <h2>Чат: ${req.title}</h2>
+                    <h2>Чат: ${escapeHtml(req.title)}</h2>
                     <div id="chatMessages" class="chat-container">
                         ${messages.map(m => `
                             <div class="chat-message ${m.fromUserId === currentUser.id ? 'sent' : 'received'}">
-                                <strong>${m.fromUserId === currentUser.id ? 'Вы' : (db.users.find(u=>u.id===m.fromUserId)?.name || 'Пользователь')}:</strong> ${m.text}<br>
+                                <strong>${m.fromUserId === currentUser.id ? 'Вы' : (otherUser?.fullName || 'Пользователь')}:</strong> ${escapeHtml(m.text)}<br>
                                 <small>${new Date(m.timestamp).toLocaleString()}</small>
                             </div>
                         `).join('')}
@@ -1073,9 +1306,50 @@
                 const db = await loadDB();
                 db.messages.push(newMsg);
                 await saveDB(db);
-                renderChatWindow(requestId);
+                renderChatWindow(requestId, otherUserId);
             });
             document.getElementById('backToChats').addEventListener('click', () => renderChats());
+        }
+
+        // ========== АРХИВ ==========
+        async function renderArchive() {
+            if (!currentUser) { navigate('login'); return; }
+            const db = await loadDB();
+            let archived = [];
+            if (currentUser.role === 'teacher') {
+                archived = db.requests.filter(r => r.userId === currentUser.id && r.status === 'completed');
+            } else if (currentUser.role === 'student') {
+                archived = db.requests.filter(r => r.booked && r.booked.some(b => b.userId === currentUser.id) && r.status === 'completed');
+            }
+            const container = document.getElementById('pageContent');
+            container.innerHTML = `
+                <div class="card">
+                    <h2>📦 Архив завершённых мероприятий</h2>
+                    <div class="request-grid">
+                        ${archived.map(req => `
+                            <div class="request-card" data-id="${req.id}">
+                                <div class="request-content">
+                                    <div class="request-title">${escapeHtml(req.title)}</div>
+                                    <div class="request-meta">
+                                        <span class="badge">${req.district}</span>
+                                        <span class="badge">${new Date(req.dateTime).toLocaleDateString('ru-RU')}</span>
+                                        <span class="badge">${helpTypes.find(t => t.value === req.helpType)?.label || req.helpType}</span>
+                                    </div>
+                                    <p>${escapeHtml(req.description)}</p>
+                                    <button class="btn-outline btn view-archive" data-id="${req.id}">Подробнее</button>
+                                </div>
+                            </div>
+                        `).join('') || '<p>Нет завершённых мероприятий</p>'}
+                    </div>
+                </div>
+            `;
+            document.querySelectorAll('.view-archive').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const id = btn.dataset.id;
+                    const req = archived.find(r => r.id === id);
+                    if (req) showRequestDetails(req);
+                });
+            });
         }
 
         // ========== ВХОД / РЕГИСТРАЦИЯ ==========
@@ -1086,7 +1360,7 @@
             sessionStorage.setItem('captchaAnswer', captchaAnswer);
             const container = document.getElementById('pageContent');
             container.innerHTML = `
-                <div class="card" style="max-width:450px; margin:0 auto;">
+                <div class="card" style="max-width:500px; margin:0 auto;">
                     <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem;">
                         <button id="showLoginBtn" class="btn" style="flex:1;">Вход</button>
                         <button id="showRegisterBtn" class="btn-outline btn" style="flex:1;">Регистрация</button>
@@ -1103,13 +1377,16 @@
                         <h2>📝 Регистрация</h2>
                         <form id="registerForm">
                             <div class="form-group"><label>Логин*</label><input class="form-control" id="regUsername" required></div>
-                            <div class="form-group"><label>Имя*</label><input class="form-control" id="regName" required></div>
+                            <div class="form-group"><label>ФИО*</label><input class="form-control" id="regFullName" required></div>
                             <div class="form-group"><label>Пароль*</label><input type="password" class="form-control" id="regPassword" required></div>
                             <div class="form-group"><label>Подтвердите пароль*</label><input type="password" class="form-control" id="regPasswordConfirm" required></div>
-                            <div class="form-group"><label>Email (для уведомлений)</label><input type="email" class="form-control" id="regEmail"></div>
+                            <div class="form-group"><label>Должность</label><input class="form-control" id="regPosition"></div>
+                            <div class="form-group"><label>Email</label><input type="email" class="form-control" id="regEmail"></div>
                             <div class="form-group"><label>Контакт (телефон)</label><input class="form-control" id="regContact"></div>
+                            <div class="form-group"><label>О себе</label><textarea class="form-control" id="regBio" rows="2"></textarea></div>
                             <div class="form-group"><label>Роль</label><select class="form-control" id="regRole"><option value="student">Ученик (доступ сразу)</option><option value="teacher">Учитель (требуется подтверждение)</option></select></div>
                             <div class="form-group"><label>Капча: сколько будет ${num1} + ${num2}?</label><input class="form-control" id="captchaInput" required></div>
+                            <div class="form-group"><label><input type="checkbox" id="agreeLicense" required> Я согласен с <a href="https://disk.yandex.ru/d/JhPuz2qU7W6fJA" target="_blank">лицензионным соглашением</a></label></div>
                             <button type="submit" class="btn">Зарегистрироваться</button>
                         </form>
                     </div>
@@ -1157,11 +1434,13 @@
                     return;
                 }
                 const username = document.getElementById('regUsername').value.trim();
-                const name = document.getElementById('regName').value.trim();
+                const fullName = document.getElementById('regFullName').value.trim();
                 const password = document.getElementById('regPassword').value;
                 const passwordConfirm = document.getElementById('regPasswordConfirm').value;
+                const position = document.getElementById('regPosition').value.trim();
                 const email = document.getElementById('regEmail').value.trim();
-                const contact = document.getElementById('regContact').value;
+                const contact = document.getElementById('regContact').value.trim();
+                const bio = document.getElementById('regBio').value.trim();
                 const role = document.getElementById('regRole').value;
                 if (password !== passwordConfirm) { showToast('Пароли не совпадают'); return; }
                 const db = await loadDB();
@@ -1173,12 +1452,14 @@
                     username,
                     passwordSalt: salt,
                     passwordHash: hash,
-                    name,
+                    fullName,
+                    position,
                     role,
                     approved: role === 'student',
                     email,
                     contact,
-                    bio: '',
+                    bio,
+                    publicData: true,
                     avatar: null
                 };
                 db.users.push(newUser);
@@ -1206,7 +1487,7 @@
                         <div class="admin-list">
                             ${pendingTeachers.map(teacher => `
                                 <div class="admin-item" data-id="${teacher.id}">
-                                    <div><strong>${teacher.name}</strong> (${teacher.username})<br>Email: ${teacher.email || 'нет'}<br>Контакт: ${teacher.contact || 'нет'}<br>О себе: ${teacher.bio || 'нет'}</div>
+                                    <div><strong>${escapeHtml(teacher.fullName)}</strong> (${escapeHtml(teacher.username)})<br>Email: ${escapeHtml(teacher.email || 'нет')}<br>Контакт: ${escapeHtml(teacher.contact || 'нет')}<br>О себе: ${escapeHtml(teacher.bio || 'нет')}</div>
                                     <div><button class="btn approveBtn" data-id="${teacher.id}">✅ Одобрить</button><button class="btn-outline btn rejectBtn" data-id="${teacher.id}">❌ Отклонить</button></div>
                                 </div>
                             `).join('')}
@@ -1222,14 +1503,7 @@
                     if (teacher) {
                         teacher.approved = true;
                         await saveDB(db);
-                        showToast(`Учитель ${teacher.name} одобрен`);
-                        if (teacher.email) {
-                            await sendEmail({
-                                to: teacher.email,
-                                subject: 'Регистрация одобрена',
-                                message: `Здравствуйте, ${teacher.name}! Ваша учётная запись учителя одобрена. Теперь вы можете создавать заявки на волонтёров.`
-                            });
-                        }
+                        showToast(`Учитель ${teacher.fullName} одобрен`);
                         renderAdmin();
                     }
                 });
@@ -1252,13 +1526,20 @@
         function renderAbout() {
             document.getElementById('pageContent').innerHTML = `
                 <div class="card">
-                    <h2>🌿 О проекте «Будь наставником!»</h2>
-                    <p>Волонтёрская помощь учителям дополнительного образования в Сочи</p>
+                    <h2>🌿 О проекте «Волонтерская помощь учителям»</h2>
+                    <p>Платформа для организации волонтёрской помощи учителям дополнительного образования в Сочи</p>
                     <hr>
-                    <h3>📋 Задачи:</h3>
-                    <ul><li>✅ Опрос учителей и учеников</li><li>✅ Созданы информационные листовки</li><li>✅ Проведено мотивационное событие</li><li>✅ Сообщество в Telegram</li><li>✅ Данный сайт с бронированием, чатом и отзывами, безопасное хранение данных</li><li>✅ Разработаны правила этикета</li><li>✅ Проведены пробные мероприятия</li></ul>
-                    <p>🔐 Все данные хранятся в зашифрованном виде на сервере, ключи доступа недоступны в клиентском коде.</p>
+                    <h3>📋 Функции сайта:</h3>
+                    <ul><li>✅ Регистрация для учителей и учеников</li><li>✅ Создание мероприятий и отклик на них</li><li>✅ Чат для общения учителей и учеников на сайте</li><li>✅ Оценка посещённых мероприятий</li><li>✅ Поиск заявок по критериям</li><li>✅ Поддержка на всех устройствах</li><li>✅ Верификация для учителей при регистрации</li></ul>
+                    <h3>📸 Проведённые мероприятия</h3>
+                    <div class="gallery">
+                        <div class="gallery-item"><img src="1.jpg" alt="Фото 1" onerror="this.src='https://via.placeholder.com/300x200?text=Фото+1'"><p>Мероприятие 1</p></div>
+                        <div class="gallery-item"><img src="2.jpg" alt="Фото 2" onerror="this.src='https://via.placeholder.com/300x200?text=Фото+2'"><p>Мероприятие 2</p></div>
+                        <div class="gallery-item"><img src="3.jpg" alt="Фото 3" onerror="this.src='https://via.placeholder.com/300x200?text=Фото+3'"><p>Мероприятие 3</p></div>
+                        <div class="gallery-item"><img src="4.jpg" alt="Фото 4" onerror="this.src='https://via.placeholder.com/300x200?text=Фото+4'"><p>Мероприятие 4</p></div>
+                    </div>
                     <p>⭐ Присоединяйтесь к волонтёрскому движению Сочи!</p>
+                    <p>Лицензионное соглашение: https://disk.yandex.ru/d/JhPuz2qU7W6fJA</p>
                 </div>
             `;
         }
@@ -1274,6 +1555,7 @@
             else if (page === 'login') await renderLogin();
             else if (page === 'admin') await renderAdmin();
             else if (page === 'chats') await renderChats();
+            else if (page === 'archive') await renderArchive();
             else if (page === 'about') renderAbout();
         }
 
